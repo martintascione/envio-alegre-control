@@ -6,7 +6,7 @@ import { OrderDetails } from "@/components/orders/OrderDetails";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, PackageX } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();

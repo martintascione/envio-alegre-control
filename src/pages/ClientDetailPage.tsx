@@ -7,7 +7,7 @@ import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, UserX } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 export function SettingsForm() {
   const [whatsappNumber, setWhatsappNumber] = useState("+5491112345678");
