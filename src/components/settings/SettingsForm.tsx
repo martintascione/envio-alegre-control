@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,20 +8,63 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
+interface WhatsAppSettings {
+  whatsappNumber: string;
+  notificationsEnabled: boolean;
+  autoNotify: boolean;
+}
+
 export function SettingsForm() {
   const [whatsappNumber, setWhatsappNumber] = useState("+5491112345678");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [autoNotify, setAutoNotify] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('whatsappSettings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings) as WhatsAppSettings;
+        setWhatsappNumber(settings.whatsappNumber);
+        setNotificationsEnabled(settings.notificationsEnabled);
+        setAutoNotify(settings.autoNotify);
+      } catch (error) {
+        console.error("Error parsing saved WhatsApp settings:", error);
+      }
+    }
+  }, []);
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simular la guardado
+    // Validate WhatsApp number
+    const isValidNumber = /^\+[0-9]{10,15}$/.test(whatsappNumber);
+    
+    if (!isValidNumber) {
+      toast.error("Número de WhatsApp inválido", {
+        description: "Por favor ingrese un número válido con código de país (ej: +5491123456789)"
+      });
+      setIsLoading(false);
+      return;
+    }
+    
+    // Save settings to localStorage
+    const settings: WhatsAppSettings = {
+      whatsappNumber,
+      notificationsEnabled,
+      autoNotify
+    };
+    
+    localStorage.setItem('whatsappSettings', JSON.stringify(settings));
+    
+    // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      toast.success("Configuración guardada correctamente");
+      toast.success("Configuración guardada correctamente", {
+        description: "Las notificaciones de WhatsApp han sido configuradas."
+      });
     }, 1000);
   };
 

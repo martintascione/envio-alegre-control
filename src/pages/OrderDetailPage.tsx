@@ -5,13 +5,15 @@ import { PageHeader } from "@/components/layouts/PageHeader";
 import { OrderDetails } from "@/components/orders/OrderDetails";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, PackageX } from "lucide-react";
+import { ArrowLeft, PackageX, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrderById } = useApp();
+  const { getOrderById, sendWhatsAppNotification } = useApp();
   const navigate = useNavigate();
+  const [sending, setSending] = useState(false);
   
   const orderData = getOrderById(orderId || "");
   
@@ -40,12 +42,59 @@ const OrderDetailPage = () => {
     });
   };
 
+  const handleSendManualNotification = async () => {
+    setSending(true);
+    
+    // Validar configuración de WhatsApp
+    const whatsAppSettings = localStorage.getItem('whatsappSettings');
+    if (!whatsAppSettings) {
+      toast.error("Configuración de WhatsApp no encontrada", {
+        description: "Por favor, configure primero las notificaciones de WhatsApp en la sección de Configuración",
+      });
+      setSending(false);
+      return;
+    }
+    
+    try {
+      const settings = JSON.parse(whatsAppSettings);
+      if (!settings.notificationsEnabled) {
+        toast.error("Notificaciones deshabilitadas", {
+          description: "Las notificaciones están deshabilitadas. Habilítelas en la sección de Configuración",
+        });
+        setSending(false);
+        return;
+      }
+      
+      const result = await sendWhatsAppNotification(order, client);
+      if (result) {
+        toast.success("Notificación enviada correctamente", {
+          description: `Se envió una notificación a ${client.name} (${client.phone})`,
+        });
+      }
+    } catch (error) {
+      console.error("Error al enviar notificación manual:", error);
+      toast.error("Error al enviar notificación", {
+        description: "Ha ocurrido un error al enviar la notificación. Intente nuevamente.",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <MainLayout>
       <PageHeader title="Detalle de Pedido">
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate("/orders")}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Volver
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleSendManualNotification}
+            disabled={sending}
+          >
+            <Send className="h-4 w-4 mr-2" /> 
+            {sending ? "Enviando..." : "Enviar notificación"}
           </Button>
           <Button variant="destructive" onClick={handleDeleteOrder}>
             Eliminar
