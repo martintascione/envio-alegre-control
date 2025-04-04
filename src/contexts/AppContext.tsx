@@ -14,7 +14,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>(
     calculateDashboardStats(mockClients)
   );
-  const { whatsAppSettings } = useWhatsAppSettings();
+  const { whatsAppSettings, setWhatsAppSettings } = useWhatsAppSettings();
 
   useEffect(() => {
     setDashboardStats(calculateDashboardStats(clients));

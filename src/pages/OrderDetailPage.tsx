@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, PackageX, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useWhatsAppSettings } from "@/contexts/useWhatsAppSettings";
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { getOrderById, sendWhatsAppNotification } = useApp();
+  const { whatsAppSettings } = useWhatsAppSettings();
   const navigate = useNavigate();
   const [sending, setSending] = useState(false);
   
@@ -45,29 +47,16 @@ const OrderDetailPage = () => {
   const handleSendManualNotification = async () => {
     setSending(true);
     
-    // Obtener la configuración de WhatsApp directamente desde localStorage
-    const whatsAppSettingsStr = localStorage.getItem('whatsappSettings');
-    
-    if (!whatsAppSettingsStr) {
-      toast.error("Configuración de WhatsApp no encontrada", {
-        description: "Por favor, configure primero las notificaciones de WhatsApp en la sección de Configuración",
+    if (!whatsAppSettings.notificationsEnabled) {
+      toast.error("Notificaciones deshabilitadas", {
+        description: "Las notificaciones están deshabilitadas. Habilítelas en la sección de Configuración",
       });
       setSending(false);
       return;
     }
     
     try {
-      const settings = JSON.parse(whatsAppSettingsStr);
-      
-      if (!settings.notificationsEnabled) {
-        toast.error("Notificaciones deshabilitadas", {
-          description: "Las notificaciones están deshabilitadas. Habilítelas en la sección de Configuración",
-        });
-        setSending(false);
-        return;
-      }
-      
-      // Enviar la notificación manualmente
+      // Enviar la notificación manualmente usando los settings del contexto
       const result = await sendWhatsAppNotification(order, client);
       
       if (result) {

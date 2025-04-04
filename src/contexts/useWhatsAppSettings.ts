@@ -9,6 +9,7 @@ export const useWhatsAppSettings = () => {
     autoNotify: true
   });
 
+  // Load settings from localStorage on component mount
   useEffect(() => {
     const savedSettings = localStorage.getItem('whatsappSettings');
     if (savedSettings) {
@@ -21,5 +22,11 @@ export const useWhatsAppSettings = () => {
     }
   }, []);
 
-  return { whatsAppSettings, setWhatsAppSettings };
+  // Save settings to localStorage whenever they change
+  const updateWhatsAppSettings = (newSettings: WhatsAppSettings) => {
+    setWhatsAppSettings(newSettings);
+    localStorage.setItem('whatsappSettings', JSON.stringify(newSettings));
+  };
+
+  return { whatsAppSettings, setWhatsAppSettings: updateWhatsAppSettings };
 };

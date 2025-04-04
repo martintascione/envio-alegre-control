@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,33 +7,21 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-
-interface WhatsAppSettings {
-  whatsappNumber: string;
-  notificationsEnabled: boolean;
-  autoNotify: boolean;
-}
+import { useWhatsAppSettings } from "@/contexts/useWhatsAppSettings";
 
 export function SettingsForm() {
-  const [whatsappNumber, setWhatsappNumber] = useState("+5491112345678");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [autoNotify, setAutoNotify] = useState(true);
+  const { whatsAppSettings, setWhatsAppSettings } = useWhatsAppSettings();
+  const [whatsappNumber, setWhatsappNumber] = useState(whatsAppSettings.whatsappNumber);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(whatsAppSettings.notificationsEnabled);
+  const [autoNotify, setAutoNotify] = useState(whatsAppSettings.autoNotify);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load settings from localStorage on component mount
+  // Update local state when settings from context change
   useEffect(() => {
-    const savedSettings = localStorage.getItem('whatsappSettings');
-    if (savedSettings) {
-      try {
-        const settings = JSON.parse(savedSettings) as WhatsAppSettings;
-        setWhatsappNumber(settings.whatsappNumber);
-        setNotificationsEnabled(settings.notificationsEnabled);
-        setAutoNotify(settings.autoNotify);
-      } catch (error) {
-        console.error("Error parsing saved WhatsApp settings:", error);
-      }
-    }
-  }, []);
+    setWhatsappNumber(whatsAppSettings.whatsappNumber);
+    setNotificationsEnabled(whatsAppSettings.notificationsEnabled);
+    setAutoNotify(whatsAppSettings.autoNotify);
+  }, [whatsAppSettings]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,14 +38,14 @@ export function SettingsForm() {
       return;
     }
     
-    // Save settings to localStorage
-    const settings: WhatsAppSettings = {
+    // Save settings using the context hook
+    const newSettings = {
       whatsappNumber,
       notificationsEnabled,
       autoNotify
     };
     
-    localStorage.setItem('whatsappSettings', JSON.stringify(settings));
+    setWhatsAppSettings(newSettings);
     
     // Simulate API call
     setTimeout(() => {
