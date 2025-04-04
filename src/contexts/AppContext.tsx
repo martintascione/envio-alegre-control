@@ -18,6 +18,7 @@ interface AppContextType {
   getOrderById: (orderId: string) => {order: Order, client: Client} | undefined;
   filterClients: (status?: string, searchTerm?: string) => Client[];
   addClient: (clientData: { name: string; email: string; phone: string }) => void;
+  addOrder: (orderData: { clientId: string; productDescription: string; store: string; trackingNumber?: string }) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -222,6 +223,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const addOrder = (orderData: { clientId: string; productDescription: string; store: string; trackingNumber?: string }) => {
+    const client = getClientById(orderData.clientId);
+    
+    if (!client) {
+      toast.error("Cliente no encontrado");
+      return;
+    }
+    
+    const newOrder: Order = {
+      id: `order-${Date.now()}`,
+      clientId: orderData.clientId,
+      productDescription: orderData.productDescription,
+      store: orderData.store,
+      trackingNumber: orderData.trackingNumber || undefined,
+      status: "purchased",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      statusHistory: [
+        {
+          status: "purchased",
+          timestamp: new Date().toISOString(),
+          notificationSent: false
+        }
+      ]
+    };
+    
+    const updatedClients = clients.map(c => {
+      if (c.id === client.id) {
+        const newStatus = c.status === "pending" ? "active" : c.status;
+        
+        return {
+          ...c,
+          orders: [...c.orders, newOrder],
+          status: newStatus
+        };
+      }
+      return c;
+    });
+    
+    setClients(updatedClients);
+    
+    toast.success(`Pedido creado para ${client.name}`, {
+      description: `${orderData.productDescription} - ${orderData.store}`,
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -232,7 +279,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getClientById,
         getOrderById,
         filterClients,
-        addClient
+        addClient,
+        addOrder
       }}
     >
       {children}

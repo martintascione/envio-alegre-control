@@ -2,8 +2,7 @@
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageHeader } from "@/components/layouts/PageHeader";
 import { OrdersList } from "@/components/orders/OrdersList";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { NewOrderDialog } from "@/components/orders/NewOrderDialog";
 
 const OrdersPage = () => {
   return (
@@ -12,9 +11,7 @@ const OrdersPage = () => {
         title="Pedidos" 
         description="Gestión de todos los pedidos en el sistema"
       >
-        <Button>
-          <Plus className="h-4 w-4 mr-2" /> Nuevo Pedido
-        </Button>
+        <NewOrderDialog />
       </PageHeader>
       
       <OrdersList />
