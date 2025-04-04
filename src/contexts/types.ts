@@ -7,6 +7,9 @@ export interface WhatsAppSettings {
   autoNotify: boolean;
   apiKey: string;
   useWhatsAppAPI: boolean;
+  provider: "direct" | "twilio";
+  twilioAccountSid: string;
+  twilioAuthToken: string;
 }
 
 export interface AppContextType {

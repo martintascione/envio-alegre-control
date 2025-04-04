@@ -8,7 +8,10 @@ export const useWhatsAppSettings = () => {
     notificationsEnabled: true,
     autoNotify: true,
     apiKey: "",
-    useWhatsAppAPI: false
+    useWhatsAppAPI: false,
+    provider: "direct",
+    twilioAccountSid: "",
+    twilioAuthToken: ""
   });
 
   // Load settings from localStorage on component mount
@@ -22,7 +25,10 @@ export const useWhatsAppSettings = () => {
           ...whatsAppSettings,
           ...settings,
           apiKey: settings.apiKey || "",
-          useWhatsAppAPI: settings.useWhatsAppAPI || false
+          useWhatsAppAPI: settings.useWhatsAppAPI || false,
+          provider: settings.provider || "direct",
+          twilioAccountSid: settings.twilioAccountSid || "",
+          twilioAuthToken: settings.twilioAuthToken || ""
         });
       } catch (error) {
         console.error("Error parsing saved WhatsApp settings:", error);
