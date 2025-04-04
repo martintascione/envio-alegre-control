@@ -49,13 +49,24 @@ export function NewClientDialog() {
 
   const onSubmit = (data: ClientFormValues) => {
     try {
-      addClient(data);
+      // Ensure all required fields are present
+      if (!data.name || !data.email || !data.phone) {
+        toast.error("Por favor complete todos los campos");
+        return;
+      }
+      
+      addClient({
+        name: data.name,
+        email: data.email,
+        phone: data.phone
+      });
+      
       toast.success("Cliente creado correctamente");
       form.reset();
       setOpen(false);
     } catch (error) {
+      console.error("Error al crear el cliente:", error);
       toast.error("Error al crear el cliente");
-      console.error(error);
     }
   };
 
