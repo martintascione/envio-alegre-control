@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Client, DashboardStats, Order, ShippingStatus } from "@/lib/types";
 import { calculateDashboardStats, mockClients, shippingStatusMap } from "@/lib/data";
@@ -18,6 +17,7 @@ interface AppContextType {
   getClientById: (clientId: string) => Client | undefined;
   getOrderById: (orderId: string) => {order: Order, client: Client} | undefined;
   filterClients: (status?: string, searchTerm?: string) => Client[];
+  addClient: (clientData: { name: string; email: string; phone: string }) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -34,7 +34,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   useEffect(() => {
-    // Load WhatsApp settings from localStorage
     const savedSettings = localStorage.getItem('whatsappSettings');
     if (savedSettings) {
       try {
@@ -47,7 +46,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
-    // Recalcular estadísticas cuando cambian los clientes
     setDashboardStats(calculateDashboardStats(clients));
   }, [clients]);
 
@@ -69,7 +67,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedClients = clients.map(client => {
       const updatedOrders = client.orders.map(order => {
         if (order.id === orderId) {
-          // Agregar el nuevo estado al historial
           const newStatusHistory = [
             ...order.statusHistory,
             {
@@ -89,7 +86,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return order;
       });
 
-      // Actualizar el estado del cliente basado en sus pedidos
       let clientStatus = client.status;
       const allFinished = updatedOrders.every(
         order => order.status === "arrived_in_argentina"
@@ -116,7 +112,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setClients(updatedClients);
     
-    // Buscar el cliente y orden actualizada para notificación
     const result = getOrderById(orderId);
     if (result) {
       const updatedOrder = updatedClients
@@ -133,7 +128,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const sendWhatsAppNotification = async (order: Order, client: Client): Promise<boolean> => {
-    // Verificar si las notificaciones están habilitadas
     if (!whatsAppSettings.notificationsEnabled) {
       console.log("Notificaciones por WhatsApp deshabilitadas");
       return false;
@@ -142,26 +136,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log(`Enviando notificación desde ${whatsAppSettings.whatsappNumber} a ${client.name} (${client.phone}) para el pedido ${order.id}`);
     console.log(`Estado actualizado a: ${shippingStatusMap[order.status]}`);
     
-    // Simular envío a la API de WhatsApp
     const message = `Hola ${client.name}, tu pedido "${order.productDescription}" ha sido actualizado al estado: ${shippingStatusMap[order.status]}`;
     console.log("Mensaje a enviar:", message);
     
-    // En una implementación real, aquí se llamaría a una API para enviar WhatsApp
-    // Por ejemplo, WhatsApp Business API, Twilio, o servicios similares
-    
-    // Simulación de envío de WhatsApp
     const sendWhatsAppAPI = async () => {
-      // Esta es una simulación. En una implementación real, 
-      // se conectaría con alguna API de WhatsApp o Twilio
-      
-      // Ejemplo de URL para abrir WhatsApp web (solo para demostración)
       const whatsappUrl = `https://wa.me/${client.phone.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`;
       console.log("URL de WhatsApp (demostración):", whatsappUrl);
       
-      // Se podría abrir en una nueva ventana si el usuario quiere enviarlo manualmente
-      // window.open(whatsappUrl, '_blank');
-      
-      // Mostrar toast de notificación enviada
       toast.success(`Notificación enviada a ${client.name}`, {
         description: `Estado: ${shippingStatusMap[order.status]}`,
         duration: 3000,
@@ -173,7 +154,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await sendWhatsAppAPI();
       
-      // Actualizar el historial de estados para marcar la notificación como enviada
       const updatedClients = clients.map(c => {
         if (c.id === client.id) {
           const updatedOrders = c.orders.map(o => {
@@ -209,12 +189,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const filterClients = (status?: string, searchTerm?: string): Client[] => {
     let filteredClients = [...clients];
     
-    // Filtrar por estado si se especifica
     if (status && status !== 'all') {
       filteredClients = filteredClients.filter(client => client.status === status);
     }
     
-    // Filtrar por término de búsqueda si se especifica
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filteredClients = filteredClients.filter(client => 
@@ -227,6 +205,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return filteredClients;
   };
 
+  const addClient = (clientData: { name: string; email: string; phone: string }) => {
+    const newClient: Client = {
+      id: `client-${Date.now()}`,
+      name: clientData.name,
+      email: clientData.email,
+      phone: clientData.phone,
+      orders: [],
+      status: "pending"
+    };
+
+    setClients([...clients, newClient]);
+    
+    toast.success(`Cliente ${clientData.name} creado`, {
+      description: "El cliente ha sido agregado correctamente",
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -236,7 +231,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendWhatsAppNotification,
         getClientById,
         getOrderById,
-        filterClients
+        filterClients,
+        addClient
       }}
     >
       {children}
