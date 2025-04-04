@@ -1,0 +1,187 @@
+
+import { Order, Client, ShippingStatus } from "@/lib/types";
+import { useState } from "react";
+import { OrderStatusBadge } from "./OrderStatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useApp } from "@/contexts/AppContext";
+import { Package, Check, Clock, AlertTriangle, SendHorizontal } from "lucide-react";
+import { shippingStatusMap } from "@/lib/data";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+
+interface OrderDetailsProps {
+  order: Order;
+  client: Client;
+}
+
+export function OrderDetails({ order, client }: OrderDetailsProps) {
+  const { updateOrderStatus } = useApp();
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<ShippingStatus | null>(null);
+
+  const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat('es-AR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }).format(new Date(dateString));
+  };
+
+  const getNextStatus = (): ShippingStatus | null => {
+    const statuses: ShippingStatus[] = [
+      "purchased",
+      "shipped_to_warehouse",
+      "received_at_warehouse",
+      "in_transit_to_argentina",
+      "arrived_in_argentina"
+    ];
+    
+    const currentIndex = statuses.indexOf(order.status);
+    if (currentIndex < statuses.length - 1) {
+      return statuses[currentIndex + 1];
+    }
+    return null;
+  };
+
+  const handleUpdateStatus = (status: ShippingStatus) => {
+    setSelectedStatus(status);
+    setOpenDialog(true);
+  };
+
+  const confirmUpdateStatus = () => {
+    if (selectedStatus) {
+      updateOrderStatus(order.id, selectedStatus);
+      setOpenDialog(false);
+    }
+  };
+
+  const nextStatus = getNextStatus();
+
+  return (
+    <>
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-xl flex items-center">
+                <Package className="mr-2 h-5 w-5" /> 
+                {order.productDescription}
+              </CardTitle>
+              <CardDescription>
+                {order.store} {order.trackingNumber ? `· Tracking: ${order.trackingNumber}` : ''}
+              </CardDescription>
+            </div>
+            <OrderStatusBadge status={order.status} className="text-xs" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">Información del Cliente</h3>
+              <div className="mt-2 text-sm">
+                <div className="font-medium">{client.name}</div>
+                <div className="text-muted-foreground">{client.email}</div>
+                <div className="text-muted-foreground">{client.phone}</div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h3 className="text-sm font-medium">Historial de Estados</h3>
+              <div className="mt-3 space-y-3">
+                {order.statusHistory.map((statusChange, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      {statusChange.notificationSent ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-yellow-500" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">
+                        {shippingStatusMap[statusChange.status]}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatDate(statusChange.timestamp)}
+                        {statusChange.notificationSent 
+                          ? " · Notificación enviada" 
+                          : " · Notificación pendiente"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col items-stretch gap-3">
+          <div className="text-sm text-muted-foreground">
+            <span>Creado: {formatDate(order.createdAt)}</span>
+            <span className="mx-2">·</span>
+            <span>Actualizado: {formatDate(order.updatedAt)}</span>
+          </div>
+          
+          {nextStatus ? (
+            <Button 
+              className="w-full" 
+              onClick={() => handleUpdateStatus(nextStatus)}
+            >
+              <SendHorizontal className="mr-2 h-4 w-4" />
+              Actualizar a: {shippingStatusMap[nextStatus]}
+            </Button>
+          ) : (
+            <Button variant="outline" className="w-full" disabled>
+              <Check className="mr-2 h-4 w-4" />
+              Pedido completado
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
+
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar actualización de estado</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas actualizar el estado del pedido?
+              Se enviará una notificación automática por WhatsApp al cliente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-3">
+            <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              <div className="text-sm">
+                <strong>Estado actual:</strong> {shippingStatusMap[order.status]}
+                <br />
+                <strong>Nuevo estado:</strong>{" "}
+                {selectedStatus ? shippingStatusMap[selectedStatus] : ""}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={confirmUpdateStatus}>
+              <SendHorizontal className="mr-2 h-4 w-4" />
+              Actualizar y notificar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

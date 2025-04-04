@@ -1,13 +1,48 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { MainLayout } from "@/components/layouts/MainLayout";
+import { PageHeader } from "@/components/layouts/PageHeader";
+import { StatsCards } from "@/components/dashboard/StatsCards";
+import { RecentClients } from "@/components/dashboard/RecentClients";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { useApp } from "@/contexts/AppContext";
 
 const Index = () => {
+  const { dashboardStats, clients } = useApp();
+  
+  // Obtener clientes ordenados por actualización reciente
+  const recentClients = [...clients]
+    .sort((a, b) => {
+      // Obtener la fecha de actualización más reciente de todos los pedidos de cada cliente
+      const latestUpdateA = a.orders.reduce((latest, order) => {
+        const orderDate = new Date(order.updatedAt).getTime();
+        return orderDate > latest ? orderDate : latest;
+      }, 0);
+      
+      const latestUpdateB = b.orders.reduce((latest, order) => {
+        const orderDate = new Date(order.updatedAt).getTime();
+        return orderDate > latest ? orderDate : latest;
+      }, 0);
+      
+      return latestUpdateB - latestUpdateA;
+    })
+    .slice(0, 5); // Limitar a 5 clientes
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <MainLayout>
+      <PageHeader 
+        title="Dashboard" 
+        description="Resumen de pedidos y clientes activos"
+      />
+      
+      <div className="space-y-6">
+        <StatsCards stats={dashboardStats} />
+        
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
+          <RecentClients clients={recentClients} />
+          <RecentActivity clients={clients} />
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
