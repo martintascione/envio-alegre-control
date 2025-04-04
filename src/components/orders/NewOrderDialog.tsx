@@ -64,13 +64,26 @@ export function NewOrderDialog() {
 
   const onSubmit = (data: OrderFormValues) => {
     try {
-      addOrder(data);
+      // Asegurarse de que todos los campos requeridos estén presentes
+      if (!data.clientId || !data.productDescription || !data.store) {
+        toast.error("Por favor complete todos los campos requeridos");
+        return;
+      }
+      
+      // Llama a la función addOrder con los datos validados
+      addOrder({
+        clientId: data.clientId,
+        productDescription: data.productDescription,
+        store: data.store,
+        trackingNumber: data.trackingNumber
+      });
+      
       toast.success("Pedido creado correctamente");
       form.reset();
       setOpen(false);
     } catch (error) {
+      console.error("Error al crear el pedido:", error);
       toast.error("Error al crear el pedido");
-      console.error(error);
     }
   };
 

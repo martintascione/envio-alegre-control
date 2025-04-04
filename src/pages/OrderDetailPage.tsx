@@ -45,9 +45,10 @@ const OrderDetailPage = () => {
   const handleSendManualNotification = async () => {
     setSending(true);
     
-    // Validar configuración de WhatsApp
-    const whatsAppSettings = localStorage.getItem('whatsappSettings');
-    if (!whatsAppSettings) {
+    // Obtener la configuración de WhatsApp directamente desde localStorage
+    const whatsAppSettingsStr = localStorage.getItem('whatsappSettings');
+    
+    if (!whatsAppSettingsStr) {
       toast.error("Configuración de WhatsApp no encontrada", {
         description: "Por favor, configure primero las notificaciones de WhatsApp en la sección de Configuración",
       });
@@ -56,7 +57,8 @@ const OrderDetailPage = () => {
     }
     
     try {
-      const settings = JSON.parse(whatsAppSettings);
+      const settings = JSON.parse(whatsAppSettingsStr);
+      
       if (!settings.notificationsEnabled) {
         toast.error("Notificaciones deshabilitadas", {
           description: "Las notificaciones están deshabilitadas. Habilítelas en la sección de Configuración",
@@ -65,10 +67,16 @@ const OrderDetailPage = () => {
         return;
       }
       
+      // Enviar la notificación manualmente
       const result = await sendWhatsAppNotification(order, client);
+      
       if (result) {
         toast.success("Notificación enviada correctamente", {
           description: `Se envió una notificación a ${client.name} (${client.phone})`,
+        });
+      } else {
+        toast.error("Error al enviar la notificación", {
+          description: "No se pudo enviar la notificación. Por favor intente nuevamente.",
         });
       }
     } catch (error) {

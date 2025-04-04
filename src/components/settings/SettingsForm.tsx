@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,7 +64,7 @@ export function SettingsForm() {
       toast.success("Configuración guardada correctamente", {
         description: "Las notificaciones de WhatsApp han sido configuradas."
       });
-    }, 1000);
+    }, 500);
   };
 
   return (
