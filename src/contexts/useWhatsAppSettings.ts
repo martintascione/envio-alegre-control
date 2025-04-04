@@ -6,7 +6,9 @@ export const useWhatsAppSettings = () => {
   const [whatsAppSettings, setWhatsAppSettings] = useState<WhatsAppSettings>({
     whatsappNumber: "+5491112345678",
     notificationsEnabled: true,
-    autoNotify: true
+    autoNotify: true,
+    apiKey: "",
+    useWhatsAppAPI: false
   });
 
   // Load settings from localStorage on component mount
@@ -15,7 +17,13 @@ export const useWhatsAppSettings = () => {
     if (savedSettings) {
       try {
         const settings = JSON.parse(savedSettings) as WhatsAppSettings;
-        setWhatsAppSettings(settings);
+        // Asegurar compatibilidad con versiones anteriores que no tenían los nuevos campos
+        setWhatsAppSettings({
+          ...whatsAppSettings,
+          ...settings,
+          apiKey: settings.apiKey || "",
+          useWhatsAppAPI: settings.useWhatsAppAPI || false
+        });
       } catch (error) {
         console.error("Error parsing saved WhatsApp settings:", error);
       }

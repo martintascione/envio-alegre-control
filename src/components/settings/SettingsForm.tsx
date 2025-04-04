@@ -14,6 +14,8 @@ export function SettingsForm() {
   const [whatsappNumber, setWhatsappNumber] = useState(whatsAppSettings.whatsappNumber);
   const [notificationsEnabled, setNotificationsEnabled] = useState(whatsAppSettings.notificationsEnabled);
   const [autoNotify, setAutoNotify] = useState(whatsAppSettings.autoNotify);
+  const [useWhatsAppAPI, setUseWhatsAppAPI] = useState(whatsAppSettings.useWhatsAppAPI || false);
+  const [apiKey, setApiKey] = useState(whatsAppSettings.apiKey || "");
   const [isLoading, setIsLoading] = useState(false);
 
   // Update local state when settings from context change
@@ -21,6 +23,8 @@ export function SettingsForm() {
     setWhatsappNumber(whatsAppSettings.whatsappNumber);
     setNotificationsEnabled(whatsAppSettings.notificationsEnabled);
     setAutoNotify(whatsAppSettings.autoNotify);
+    setUseWhatsAppAPI(whatsAppSettings.useWhatsAppAPI || false);
+    setApiKey(whatsAppSettings.apiKey || "");
   }, [whatsAppSettings]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -38,11 +42,22 @@ export function SettingsForm() {
       return;
     }
     
+    // Validate API Key if WhatsApp API is enabled
+    if (useWhatsAppAPI && !apiKey.trim()) {
+      toast.error("API Key de WhatsApp requerida", {
+        description: "Por favor ingrese la API Key de WhatsApp Business"
+      });
+      setIsLoading(false);
+      return;
+    }
+    
     // Save settings using the context hook
     const newSettings = {
       whatsappNumber,
       notificationsEnabled,
-      autoNotify
+      autoNotify,
+      useWhatsAppAPI,
+      apiKey
     };
     
     setWhatsAppSettings(newSettings);
@@ -129,6 +144,37 @@ export function SettingsForm() {
                   disabled={!notificationsEnabled}
                 />
               </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="useWhatsAppAPI">Usar API de WhatsApp Business</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Usar la API oficial de WhatsApp Business para envío programático
+                  </p>
+                </div>
+                <Switch 
+                  id="useWhatsAppAPI"
+                  checked={useWhatsAppAPI}
+                  onCheckedChange={setUseWhatsAppAPI}
+                  disabled={!notificationsEnabled}
+                />
+              </div>
+              
+              {useWhatsAppAPI && (
+                <div className="grid gap-2">
+                  <Label htmlFor="apiKey">API Key de WhatsApp Business</Label>
+                  <Input 
+                    id="apiKey"
+                    type="password"
+                    placeholder="Ingrese su API Key de WhatsApp Business" 
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    La API Key se obtiene desde el panel de desarrollador de WhatsApp Business
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

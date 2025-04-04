@@ -5,6 +5,8 @@ export interface WhatsAppSettings {
   whatsappNumber: string;
   notificationsEnabled: boolean;
   autoNotify: boolean;
+  apiKey: string;
+  useWhatsAppAPI: boolean;
 }
 
 export interface AppContextType {
