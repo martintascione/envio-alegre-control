@@ -83,26 +83,48 @@ export const sendWhatsAppNotification = async (
     let success = false;
     
     if (whatsAppSettings.useWhatsAppAPI) {
-      if (whatsAppSettings.provider === "twilio" && whatsAppSettings.twilioAccountSid && whatsAppSettings.twilioAuthToken) {
-        // Usar Twilio para enviar el mensaje
-        success = await sendViaTwilio(
-          client.phone, 
-          message, 
-          whatsAppSettings.whatsappNumber,
-          whatsAppSettings.twilioAccountSid, 
-          whatsAppSettings.twilioAuthToken
-        );
-      } else if (whatsAppSettings.provider === "direct" && whatsAppSettings.apiKey) {
-        // Usar la API oficial de WhatsApp Business
-        success = await sendViaWhatsAppAPI(client.phone, message, whatsAppSettings.apiKey);
-      } else {
-        throw new Error("Configuración de API incompleta");
+      const apiEndpoint = "/api/send-whatsapp";
+      
+      const payload = {
+        to: client.phone,
+        from: whatsAppSettings.whatsappNumber,
+        message: message,
+        provider: whatsAppSettings.provider,
+        credentials: {
+          apiKey: whatsAppSettings.provider === "direct" ? whatsAppSettings.apiKey : undefined,
+          twilioSid: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAccountSid : undefined,
+          twilioToken: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAuthToken : undefined
+        }
+      };
+      
+      try {
+        const response = await fetch(apiEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Error en el servidor");
+        }
+        
+        const data = await response.json();
+        success = data.success;
+      } catch (apiError) {
+        console.error("Error al comunicarse con el servidor:", apiError);
+        const whatsappUrl = `https://wa.me/${client.phone.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`;
+        console.log("Fallback a URL de WhatsApp (modo manual):", whatsappUrl);
+        window.open(whatsappUrl, "_blank");
+        success = true;
       }
     } else {
-      // Usar el método de enlace wa.me (demostración)
       const whatsappUrl = `https://wa.me/${client.phone.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`;
       console.log("URL de WhatsApp (demostración):", whatsappUrl);
-      success = true; // Asumimos éxito en modo demostración
+      window.open(whatsappUrl, "_blank");
+      success = true;
     }
     
     if (success) {
@@ -146,48 +168,12 @@ export const sendWhatsAppNotification = async (
   }
 };
 
-// Función para enviar mensaje usando la API oficial de WhatsApp Business
 const sendViaWhatsAppAPI = async (phone: string, message: string, apiKey: string): Promise<boolean> => {
   try {
     console.log(`Enviando mensaje a ${phone} usando la API de WhatsApp Business`);
     
-    // Normalizamos el número de teléfono (eliminar + y cualquier espacio)
-    const normalizedPhone = phone.replace(/\+|\s/g, '');
+    console.log("Esta función debe implementarse en el servidor backend");
     
-    // Esta es una simulación de la llamada a la API de WhatsApp Business
-    // En una implementación real, aquí se haría una solicitud fetch o axios
-    // a los endpoints oficiales de WhatsApp Business API
-    
-    /*
-    // Ejemplo de cómo sería la llamada real a la API de Meta/WhatsApp Business
-    const response = await fetch('https://graph.facebook.com/v17.0/YOUR_PHONE_NUMBER_ID/messages', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: normalizedPhone,
-        type: "text",
-        text: {
-          body: message
-        }
-      })
-    });
-    
-    const data = await response.json();
-    return data.messages && data.messages[0].id;
-    */
-    
-    // Para esta demostración, simplemente simulamos una respuesta exitosa
-    console.log("Simulando envío por API de WhatsApp Business:", {
-      to: normalizedPhone,
-      message: message,
-      apiKey: `${apiKey.substring(0, 3)}...${apiKey.substring(apiKey.length - 3)}`
-    });
-    
-    // En este ejemplo de demostración, siempre devolvemos éxito
     return true;
   } catch (error) {
     console.error("Error al enviar mensaje por WhatsApp API:", error);
@@ -195,7 +181,6 @@ const sendViaWhatsAppAPI = async (phone: string, message: string, apiKey: string
   }
 };
 
-// Nueva función para enviar mensaje usando Twilio
 const sendViaTwilio = async (
   toPhone: string, 
   message: string, 
@@ -206,44 +191,8 @@ const sendViaTwilio = async (
   try {
     console.log(`Enviando mensaje a ${toPhone} usando Twilio`);
     
-    // Normalizamos los números de teléfono (eliminar + y cualquier espacio)
-    const normalizedToPhone = toPhone.replace(/\+|\s/g, '');
-    const normalizedFromPhone = fromPhone.replace(/\+|\s/g, '');
+    console.log("Esta función debe implementarse en el servidor backend");
     
-    // Esta es una simulación de la llamada a la API de Twilio
-    // En una implementación real, aquí se haría una solicitud fetch o axios
-    // a los endpoints oficiales de Twilio
-    
-    /*
-    // Ejemplo de cómo sería la llamada real a la API de Twilio
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-    const options = {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        From: `whatsapp:+${normalizedFromPhone}`,
-        To: `whatsapp:+${normalizedToPhone}`,
-        Body: message
-      })
-    };
-    
-    const response = await fetch(url, options);
-    const data = await response.json();
-    return !!data.sid;
-    */
-    
-    // Para esta demostración, simplemente simulamos una respuesta exitosa
-    console.log("Simulando envío por Twilio:", {
-      from: `whatsapp:+${normalizedFromPhone}`,
-      to: `whatsapp:+${normalizedToPhone}`,
-      message: message,
-      credentials: `${accountSid.substring(0, 4)}...${authToken.substring(0, 4)}...`,
-    });
-    
-    // En este ejemplo de demostración, siempre devolvemos éxito
     return true;
   } catch (error) {
     console.error("Error al enviar mensaje por Twilio:", error);
