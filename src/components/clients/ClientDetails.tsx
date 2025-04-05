@@ -4,7 +4,6 @@ import { OrderStatusBadge } from "../orders/OrderStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TabsContent } from "@/components/ui/tabs";
 import { Package, Mail, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -101,52 +100,52 @@ export function ClientDetails({ client }: ClientDetailsProps) {
         </CardContent>
       </Card>
 
-      <TabsContent value="orders" className="mt-0">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pedidos del cliente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {sortedOrders.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                Este cliente no tiene pedidos
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {sortedOrders.map(order => (
-                  <div 
-                    key={order.id} 
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="space-y-2">
-                      <div className="font-medium flex items-center">
-                        <Package className="h-4 w-4 mr-2 text-muted-foreground" />
-                        {order.productDescription}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {order.store} 
-                        {order.trackingNumber ? ` · Tracking: ${order.trackingNumber}` : ''}
-                        <div className="mt-1">
-                          Actualizado: {formatDate(order.updatedAt)}
-                        </div>
-                      </div>
+      {/* Eliminamos el TabsContent aquí y mostramos directamente la Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pedidos del cliente</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sortedOrders.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              Este cliente no tiene pedidos
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedOrders.map(order => (
+                <div 
+                  key={order.id} 
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="space-y-2">
+                    <div className="font-medium flex items-center">
+                      <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {order.productDescription}
                     </div>
-                    
-                    <div className="flex flex-col sm:items-end gap-3 mt-3 sm:mt-0">
-                      <OrderStatusBadge status={order.status} />
-                      <Link to={`/orders/${order.id}`}>
-                        <Button variant="outline" size="sm">
-                          Ver detalles
-                        </Button>
-                      </Link>
+                    <div className="text-sm text-muted-foreground">
+                      {order.store} 
+                      {order.trackingNumber ? ` · Tracking: ${order.trackingNumber}` : ''}
+                      <div className="mt-1">
+                        Actualizado: {formatDate(order.updatedAt)}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
+                  
+                  <div className="flex flex-col sm:items-end gap-3 mt-3 sm:mt-0">
+                    <OrderStatusBadge status={order.status} />
+                    <Link to={`/orders/${order.id}`}>
+                      <Button variant="outline" size="sm">
+                        Ver detalles
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
+

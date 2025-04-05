@@ -6,7 +6,6 @@ import { ClientDetails } from "@/components/clients/ClientDetails";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trash2, UserX } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -86,13 +85,7 @@ const ClientDetailPage = () => {
         </div>
       </PageHeader>
       
-      <Tabs defaultValue="orders" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="orders">Pedidos</TabsTrigger>
-        </TabsList>
-        
-        <ClientDetails client={client} />
-      </Tabs>
+      <ClientDetails client={client} />
     </MainLayout>
   );
 };
