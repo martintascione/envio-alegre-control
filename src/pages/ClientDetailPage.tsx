@@ -5,14 +5,27 @@ import { PageHeader } from "@/components/layouts/PageHeader";
 import { ClientDetails } from "@/components/clients/ClientDetails";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, UserX } from "lucide-react";
+import { ArrowLeft, Trash2, UserX } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
-  const { getClientById } = useApp();
+  const { getClientById, deleteClient } = useApp();
   const navigate = useNavigate();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const client = getClientById(clientId || "");
   
@@ -34,9 +47,11 @@ const ClientDetailPage = () => {
   }
 
   const handleDeleteClient = () => {
-    toast.error("Funcionalidad no implementada", {
-      description: "La eliminación de clientes estará disponible en una próxima versión",
+    deleteClient(client.id);
+    toast.success(`Cliente ${client.name} eliminado`, {
+      description: "El cliente ha sido eliminado correctamente",
     });
+    navigate("/clients");
   };
 
   return (
@@ -46,9 +61,28 @@ const ClientDetailPage = () => {
           <Button variant="outline" onClick={() => navigate("/clients")}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Volver
           </Button>
-          <Button variant="destructive" onClick={handleDeleteClient}>
-            Eliminar
-          </Button>
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción eliminará permanentemente al cliente {client.name} y todos sus pedidos asociados.
+                  Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteClient} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Eliminar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </PageHeader>
       

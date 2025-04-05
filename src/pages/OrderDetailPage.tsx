@@ -5,17 +5,29 @@ import { PageHeader } from "@/components/layouts/PageHeader";
 import { OrderDetails } from "@/components/orders/OrderDetails";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, PackageX, Send } from "lucide-react";
+import { ArrowLeft, PackageX, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useWhatsAppSettings } from "@/contexts/useWhatsAppSettings";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrderById, sendWhatsAppNotification } = useApp();
+  const { getOrderById, sendWhatsAppNotification, deleteOrder } = useApp();
   const { whatsAppSettings } = useWhatsAppSettings();
   const navigate = useNavigate();
   const [sending, setSending] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const orderData = getOrderById(orderId || "");
   
@@ -39,9 +51,8 @@ const OrderDetailPage = () => {
   const { order, client } = orderData;
 
   const handleDeleteOrder = () => {
-    toast.error("Funcionalidad no implementada", {
-      description: "La eliminación de pedidos estará disponible en una próxima versión",
-    });
+    deleteOrder(order.id);
+    navigate("/orders");
   };
 
   const handleSendManualNotification = async () => {
@@ -93,9 +104,28 @@ const OrderDetailPage = () => {
             <Send className="h-4 w-4 mr-2" /> 
             {sending ? "Enviando..." : "Enviar notificación"}
           </Button>
-          <Button variant="destructive" onClick={handleDeleteOrder}>
-            Eliminar
-          </Button>
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción eliminará permanentemente el pedido "{order.productDescription}" del cliente {client.name}.
+                  Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Eliminar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </PageHeader>
       

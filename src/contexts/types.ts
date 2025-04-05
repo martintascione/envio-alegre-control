@@ -22,4 +22,6 @@ export interface AppContextType {
   filterClients: (status?: string, searchTerm?: string) => Client[];
   addClient: (clientData: { name: string; email: string; phone: string }) => void;
   addOrder: (orderData: { clientId: string; productDescription: string; store: string; trackingNumber?: string }) => void;
+  deleteClient: (clientId: string) => void;
+  deleteOrder: (orderId: string) => void;
 }

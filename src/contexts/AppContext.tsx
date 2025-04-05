@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Client, DashboardStats, Order, ShippingStatus } from "@/lib/types";
 import { calculateDashboardStats, mockClients } from "@/lib/data";
@@ -6,6 +5,7 @@ import { AppContextType } from "./types";
 import { getClientById, getOrderById, filterClients, addClient } from "./clientUtils";
 import { updateOrderStatus, sendWhatsAppNotification, addOrder } from "./orderUtils";
 import { useWhatsAppSettings } from "./useWhatsAppSettings";
+import { toast } from "sonner";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -62,6 +62,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addOrder(clients, setClients, orderData);
   };
 
+  const handleDeleteClient = (clientId: string) => {
+    const client = getClientById(clients, clientId);
+    if (!client) return;
+
+    setClients(prevClients => prevClients.filter(c => c.id !== clientId));
+    
+    toast.success(`Cliente ${client.name} eliminado`, {
+      description: "El cliente ha sido eliminado correctamente",
+    });
+  };
+
+  const handleDeleteOrder = (orderId: string) => {
+    const orderData = getOrderById(clients, orderId);
+    if (!orderData) return;
+
+    const { order, client } = orderData;
+
+    const updatedClients = clients.map(c => {
+      if (c.id === client.id) {
+        const updatedOrders = c.orders.filter(o => o.id !== orderId);
+        
+        // Actualizar estado del cliente si es necesario
+        let newStatus = c.status;
+        if (updatedOrders.length === 0) {
+          newStatus = "pending";
+        } else if (updatedOrders.every(o => o.status === "arrived_in_argentina")) {
+          newStatus = "finished";
+        } else if (updatedOrders.some(o => o.status !== "purchased")) {
+          newStatus = "active";
+        } else {
+          newStatus = "pending";
+        }
+        
+        return { ...c, orders: updatedOrders, status: newStatus };
+      }
+      return c;
+    });
+
+    setClients(updatedClients);
+    
+    toast.success(`Pedido eliminado`, {
+      description: `Se ha eliminado el pedido "${order.productDescription}" del cliente ${client.name}`,
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -73,7 +118,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getOrderById: handleGetOrderById,
         filterClients: handleFilterClients,
         addClient: handleAddClient,
-        addOrder: handleAddOrder
+        addOrder: handleAddOrder,
+        deleteClient: handleDeleteClient,
+        deleteOrder: handleDeleteOrder
       }}
     >
       {children}
