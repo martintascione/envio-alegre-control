@@ -2,7 +2,30 @@ import { Client, Order, ShippingStatus } from "@/lib/types";
 import { toast } from "sonner";
 import { getClientById } from "./clientUtils";
 import { shippingStatusMap } from "@/lib/data";
-import { WhatsAppSettings } from "./types";
+import { WhatsAppSettings, MessageTemplate } from "./types";
+
+const applyTemplateVariables = (
+  template: string,
+  client: Client,
+  order: Order
+): string => {
+  const currentDate = new Date();
+  const estimatedDate = new Date(currentDate);
+  estimatedDate.setDate(currentDate.getDate() + 14); // Fecha estimada para ejemplo (2 semanas)
+  
+  const formattedEstimatedDate = new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(estimatedDate);
+
+  return template
+    .replace(/\[cliente\]/g, client.name)
+    .replace(/\[comercio\]/g, order.store)
+    .replace(/\[pedido\]/g, order.productDescription)
+    .replace(/\[fecha\]/g, formattedEstimatedDate)
+    .replace(/\[tracking\]/g, order.trackingNumber || "Sin número de tracking");
+};
 
 export const updateOrderStatus = (
   clients: Client[], 
@@ -76,7 +99,14 @@ export const sendWhatsAppNotification = async (
   console.log(`Enviando notificación desde ${whatsAppSettings.whatsappNumber} a ${client.name} (${client.phone}) para el pedido ${order.id}`);
   console.log(`Estado actualizado a: ${shippingStatusMap[order.status]}`);
   
-  const message = `Hola ${client.name}, tu pedido "${order.productDescription}" ha sido actualizado al estado: ${shippingStatusMap[order.status]}`;
+  let messageTemplate = whatsAppSettings.messageTemplates?.find(
+    template => template.status === order.status && template.enabled
+  );
+  
+  const message = messageTemplate 
+    ? applyTemplateVariables(messageTemplate.template, client, order)
+    : `Hola ${client.name}, tu pedido "${order.productDescription}" ha sido actualizado al estado: ${shippingStatusMap[order.status]}`;
+  
   console.log("Mensaje a enviar:", message);
   
   try {

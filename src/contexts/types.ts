@@ -1,6 +1,12 @@
 
 import { Client, DashboardStats, Order, ShippingStatus } from "@/lib/types";
 
+export interface MessageTemplate {
+  status: ShippingStatus;
+  template: string;
+  enabled: boolean;
+}
+
 export interface WhatsAppSettings {
   whatsappNumber: string;
   notificationsEnabled: boolean;
@@ -10,6 +16,7 @@ export interface WhatsAppSettings {
   provider: "direct" | "twilio";
   twilioAccountSid: string;
   twilioAuthToken: string;
+  messageTemplates: MessageTemplate[];
 }
 
 export interface AppContextType {
