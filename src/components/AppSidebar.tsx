@@ -40,7 +40,8 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="flex justify-center py-6">
         <h1 className="font-bold text-2xl text-white">
-          <span className="text-brand-cyan">Envio</span>Alegre
+          <span className="text-brand-cyan">ESIMPORTAR</span>
+          <div className="text-sm mt-1">GESTION DE ENVIOS</div>
         </h1>
         <SidebarTrigger className="absolute right-4 text-white" />
       </SidebarHeader>
@@ -65,7 +66,7 @@ export function AppSidebar() {
             <span>Cerrar sesión</span>
           </div>
           <div className="px-4 py-4 text-sm opacity-70">
-            © 2025 EnvioAlegre
+            © 2025 ESIMPORTAR
           </div>
         </div>
       </SidebarFooter>
