@@ -6,7 +6,7 @@
 
 const config = {
   // Cambia esto a la URL de tu dominio en Hostinger cuando despliegues la aplicación
-  apiUrl: import.meta.env.VITE_API_URL || "https://tu-dominio.com/api",
+  apiUrl: import.meta.env.VITE_API_URL || "https://tudominio.com/api",
   
   // Endpoints de la API
   endpoints: {
