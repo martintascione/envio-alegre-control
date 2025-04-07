@@ -8,7 +8,7 @@ const config = {
   // URL de la API en tu dominio de Hostinger
   apiUrl: window.location.hostname === 'localhost' 
     ? "http://localhost/api" // Desarrollo local
-    : "https://grey-lion-594825.hostingersite.com/api", // Producción con el dominio específico de Hostinger
+    : `https://${window.location.hostname}/api`, // Producción con el dominio real del sitio
   
   // Endpoints de la API
   endpoints: {
