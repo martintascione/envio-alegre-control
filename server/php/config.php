@@ -2,12 +2,12 @@
 <?php
 // Configuración de la base de datos - MODIFICAR con tus credenciales de Hostinger
 $db_host = 'localhost'; // Normalmente es localhost en Hostinger
-$db_name = 'esimportar_db'; // Ya has creado esta base de datos
-$db_user = 'usuario_esimportar'; // Reemplaza con tu usuario de base de datos real
-$db_pass = 'tu_contraseña_segura'; // Reemplaza con tu contraseña real
+$db_name = 'esimportar_db'; // Tu base de datos que ya creaste
+$db_user = 'tu_usuario_aqui'; // Reemplaza con tu usuario de base de datos real
+$db_pass = 'tu_contraseña_aqui'; // Reemplaza con tu contraseña real
 
 // Configuración general
-$jwt_secret = 'clave_secreta_aleatoria_para_jwt_12345'; // Una clave secreta aleatoria para tokens JWT
+$jwt_secret = 'tu_clave_secreta_personalizada_123'; // Cambia esto por una clave segura y única
 $jwt_expiration = 86400; // Tiempo de expiración del token (24 horas)
 
 // Configuración CORS (Cross-Origin Resource Sharing)

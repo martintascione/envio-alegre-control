@@ -1,11 +1,12 @@
+
 /**
  * Configuración de la aplicación
  * Ajusta estos valores para conectar con tu API backend en Hostinger
  */
 
 const config = {
-  // Cambia esto a la URL real de tu dominio en Hostinger
-  apiUrl: import.meta.env.VITE_API_URL || "https://tudominio.com/api", // Reemplaza "tudominio.com" con tu dominio real
+  // URL de la API en tu dominio de Hostinger
+  apiUrl: import.meta.env.VITE_API_URL || "https://tu-dominio.com/api", // Reemplaza con tu dominio real
   
   // Endpoints de la API
   endpoints: {
