@@ -6,7 +6,7 @@
 
 const config = {
   // URL de la API en tu dominio de Hostinger
-  apiUrl: "https://tudominio.com/api", // Reemplaza "tudominio.com" con tu dominio real de Hostinger
+  apiUrl: "https://esimportar.com/api", // Reemplaza con tu dominio real
   
   // Endpoints de la API
   endpoints: {
