@@ -10,6 +10,10 @@ const config = {
     ? "http://localhost/api" // Desarrollo local
     : `https://${window.location.hostname}/api`, // Producción con el dominio real del sitio
   
+  // Detección mejorada del modo de desarrollo
+  isDevelopmentMode: window.location.hostname === 'localhost' || 
+                    window.location.hostname.includes('lovableproject.com'),
+  
   // Endpoints de la API
   endpoints: {
     clients: "/clients",
@@ -18,9 +22,6 @@ const config = {
     whatsapp: "/whatsapp",
     auth: "/auth"
   },
-  
-  // Configuración para modo sin conexión o desarrollo
-  isDevelopmentMode: window.location.hostname === 'localhost',
   
   // Otros ajustes
   defaultLanguage: "es",

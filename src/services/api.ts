@@ -37,9 +37,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Usamos datos de demostración solo en modo desarrollo local
+    // Usamos datos de demostración solo en modo desarrollo
     if (config.isDevelopmentMode && endpoint === config.endpoints.clients) {
-      console.log("Utilizando datos de demostración en modo desarrollo local");
+      console.log("Utilizando datos de demostración en modo desarrollo");
       const cachedData = localStorage.getItem('demo_clients');
       if (cachedData) {
         return JSON.parse(cachedData) as T;
@@ -49,6 +49,13 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       const demoClients = createDemoClients();
       localStorage.setItem('demo_clients', JSON.stringify(demoClients));
       return demoClients as unknown as T;
+    }
+    
+    // Verificar si estamos en Lovable (entorno de desarrollo)
+    if (window.location.hostname.includes('lovableproject.com')) {
+      console.log("Entorno de desarrollo Lovable detectado, usando datos de demostración");
+      const demoData = endpoint === config.endpoints.clients ? createDemoClients() : [];
+      return demoData as unknown as T;
     }
     
     const response = await fetch(url, {
@@ -65,10 +72,27 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     }
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        message: "Error en el servidor",
-      }));
-      throw new Error(errorData.message || `Error ${response.status}`);
+      const contentType = response.headers.get("content-type");
+      let errorMessage = `Error ${response.status}`;
+      
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } else {
+        // Si la respuesta no es JSON, usar el texto directamente
+        const errorText = await response.text();
+        console.error("Respuesta no JSON del servidor:", errorText);
+        errorMessage = "Error en el servidor. La respuesta no es un JSON válido.";
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // Verificar que la respuesta es JSON antes de procesarla
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      console.error("La respuesta del servidor no es JSON:", await response.text());
+      throw new Error("La respuesta del servidor no es un JSON válido");
     }
 
     const data = await response.json();
@@ -77,9 +101,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   } catch (error) {
     console.error("API Error:", error);
     
-    // Solo usamos datos de demostración como fallback en modo desarrollo local
-    if (config.isDevelopmentMode && endpoint === config.endpoints.clients) {
-      console.warn("Modo desarrollo: Utilizando datos de demostración debido a error de conexión");
+    // Usar datos de demostración como fallback
+    if (endpoint === config.endpoints.clients) {
+      console.warn("Usando datos de demostración debido a error de conexión");
       
       // Cargar datos de demostración desde localStorage si existen
       const cachedData = localStorage.getItem('demo_clients');
@@ -93,7 +117,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       return demoClients as unknown as T;
     }
     
-    // En producción, solo mostramos el error
+    // En producción, mostramos el error
     if (error instanceof Error) {
       toast.error(`Error de conexión: ${error.message}`, {
         description: "Verifica la conexión con el servidor"
