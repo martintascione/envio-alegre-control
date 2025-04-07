@@ -7,7 +7,7 @@
 const config = {
   // URL de la API en tu dominio de Hostinger
   apiUrl: window.location.hostname === 'localhost' 
-    ? "http://localhost/esimportar/api" // Desarrollo local
+    ? "http://localhost/api" // Desarrollo local
     : "https://esimportar.com/api", // Producción - Tu dominio real
   
   // Endpoints de la API
