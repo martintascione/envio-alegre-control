@@ -32,4 +32,5 @@ export interface AppContextType {
   addOrder: (orderData: { clientId: string; productDescription: string; store: string; trackingNumber?: string }) => void;
   deleteClient: (clientId: string) => void;
   deleteOrder: (orderId: string) => void;
+  refreshData: () => void;
 }

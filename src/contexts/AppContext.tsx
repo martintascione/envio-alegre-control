@@ -14,6 +14,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalClients: 0,
     activeClients: 0,
@@ -23,26 +25,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pendingOrders: 0,
     completedOrders: 0,
   });
-  const { whatsAppSettings, setWhatsAppSettings } = useWhatsAppSettings();
+  const { whatsAppSettings } = useWhatsAppSettings();
 
   // Cargar clientes desde la API
+  const fetchClients = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("Obteniendo datos de clientes de la API...");
+      
+      const data = await apiService.clients.getAll();
+      console.log(`Recibidos ${data.length} clientes de la API`);
+      
+      setClients(data);
+      setDashboardStats(calculateDashboardStats(data));
+      setLastFetchTime(Date.now());
+    } catch (error) {
+      console.error("Error al cargar clientes:", error);
+      setError("Error al cargar datos de clientes");
+      toast.error("Error al cargar datos de clientes", {
+        description: "Verifica tu conexión e inténtalo nuevamente"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar clientes al montar el componente
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        setLoading(true);
-        const data = await apiService.clients.getAll();
-        setClients(data);
-        setDashboardStats(calculateDashboardStats(data));
-      } catch (error) {
-        console.error("Error al cargar clientes:", error);
-        toast.error("Error al cargar datos de clientes");
-      } finally {
-        setLoading(false);
+    fetchClients();
+    
+    // Actualizar datos cada 60 segundos si la ventana está activa
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchClients();
+      }
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Escuchar eventos de visibilidad para recargar datos cuando el usuario regresa a la página
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Solo recargar si han pasado al menos 30 segundos desde la última carga
+        if (Date.now() - lastFetchTime > 30000) {
+          fetchClients();
+        }
       }
     };
-
-    fetchClients();
-  }, []);
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [lastFetchTime]);
 
   // Actualizar estadísticas cuando cambien los clientes
   useEffect(() => {
@@ -64,6 +102,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!result) return;
       
       await apiService.orders.updateStatus(orderId, newStatus);
+      console.log(`Estado actualizado en el servidor para orden ${orderId}: ${newStatus}`);
       
       // Luego actualizar el estado local
       const updatedClients = updateOrderStatus(clients, setClients, orderId, newStatus);
@@ -96,15 +135,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleAddClient = async (clientData: { name: string; email: string; phone: string }) => {
     try {
-      // Primero guardar en el backend
-      const newClient = await apiService.clients.create(clientData);
+      console.log("Creando nuevo cliente:", clientData);
       
-      // Luego actualizar el estado local
-      setClients(prevClients => [...prevClients, newClient]);
+      // Guardar en el backend
+      const newClient = await apiService.clients.create(clientData);
+      console.log("Cliente creado en el servidor:", newClient);
+      
+      // Actualizar el estado local
+      setClients(prevClients => {
+        const updated = [...prevClients, newClient];
+        console.log("Estado local actualizado con el nuevo cliente");
+        return updated;
+      });
       
       toast.success(`Cliente ${clientData.name} creado`, {
         description: "El cliente ha sido agregado correctamente",
       });
+      
+      // Recargar datos para asegurar sincronización
+      setTimeout(() => fetchClients(), 1000);
+      
     } catch (error) {
       console.error("Error al crear cliente:", error);
       toast.error("Error al crear el cliente");
@@ -113,10 +163,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleAddOrder = async (orderData: { clientId: string; productDescription: string; store: string; trackingNumber?: string }) => {
     try {
-      // Primero guardar en el backend
-      const newOrder = await apiService.orders.create(orderData);
+      console.log("Creando nuevo pedido:", orderData);
       
-      // Luego actualizar el estado local
+      // Guardar en el backend
+      const newOrder = await apiService.orders.create(orderData);
+      console.log("Pedido creado en el servidor:", newOrder);
+      
+      // Actualizar el estado local
       const client = getClientById(clients, orderData.clientId);
       if (!client) return;
       
@@ -135,6 +188,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.success(`Pedido creado para ${client.name}`, {
         description: `${orderData.productDescription} - ${orderData.store}`,
       });
+      
+      // Recargar datos para asegurar sincronización
+      setTimeout(() => fetchClients(), 1000);
+      
     } catch (error) {
       console.error("Error al crear pedido:", error);
       toast.error("Error al crear el pedido");
@@ -146,15 +203,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!client) return;
 
     try {
-      // Primero eliminar en el backend
-      await apiService.clients.delete(clientId);
+      console.log(`Eliminando cliente ${clientId}...`);
       
-      // Luego actualizar el estado local
+      // Eliminar en el backend
+      await apiService.clients.delete(clientId);
+      console.log(`Cliente ${clientId} eliminado en el servidor`);
+      
+      // Actualizar el estado local
       setClients(prevClients => prevClients.filter(c => c.id !== clientId));
       
       toast.success(`Cliente ${client.name} eliminado`, {
         description: "El cliente ha sido eliminado correctamente",
       });
+      
+      // Recargar datos para asegurar sincronización
+      setTimeout(() => fetchClients(), 1000);
+      
     } catch (error) {
       console.error("Error al eliminar cliente:", error);
       toast.error("Error al eliminar el cliente");
@@ -168,10 +232,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { order, client } = orderData;
 
     try {
-      // Primero eliminar en el backend
-      await apiService.orders.delete(orderId);
+      console.log(`Eliminando pedido ${orderId}...`);
       
-      // Luego actualizar el estado local
+      // Eliminar en el backend
+      await apiService.orders.delete(orderId);
+      console.log(`Pedido ${orderId} eliminado en el servidor`);
+      
+      // Actualizar el estado local
       const updatedClients = clients.map(c => {
         if (c.id === client.id) {
           const updatedOrders = c.orders.filter(o => o.id !== orderId);
@@ -198,10 +265,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.success(`Pedido eliminado`, {
         description: `Se ha eliminado el pedido "${order.productDescription}" del cliente ${client.name}`,
       });
+      
+      // Recargar datos para asegurar sincronización
+      setTimeout(() => fetchClients(), 1000);
+      
     } catch (error) {
       console.error("Error al eliminar pedido:", error);
       toast.error("Error al eliminar el pedido");
     }
+  };
+
+  // Función para forzar una recarga de datos
+  const refreshData = () => {
+    fetchClients();
   };
 
   return (
@@ -218,7 +294,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addClient: handleAddClient,
         addOrder: handleAddOrder,
         deleteClient: handleDeleteClient,
-        deleteOrder: handleDeleteOrder
+        deleteOrder: handleDeleteOrder,
+        refreshData
       }}
     >
       {children}
