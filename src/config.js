@@ -8,7 +8,9 @@ const config = {
   // URL de la API en tu dominio de Hostinger
   apiUrl: window.location.hostname === 'localhost' 
     ? "http://localhost/api" // Desarrollo local
-    : "https://grey-lion-594825.hostingersite.com/api", // Producción con el dominio específico de Hostinger
+    : window.location.hostname.includes('lovableproject.com')
+      ? "/api-mock" // Entorno de desarrollo Lovable (usando datos mock)
+      : "https://grey-lion-594825.hostingersite.com/api", // Producción con el dominio específico de Hostinger
   
   // Endpoints de la API
   endpoints: {
@@ -18,6 +20,9 @@ const config = {
     whatsapp: "/whatsapp",
     auth: "/auth"
   },
+  
+  // Configuración para modo sin conexión o desarrollo
+  isDevelopmentMode: window.location.hostname.includes('lovableproject.com') || window.location.hostname === 'localhost',
   
   // Otros ajustes
   defaultLanguage: "es",

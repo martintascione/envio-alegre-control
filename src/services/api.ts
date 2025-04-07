@@ -1,4 +1,3 @@
-
 import config from "../config.js";
 import { toast } from "sonner";
 
@@ -20,9 +19,6 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
-// Verificar si estamos en modo desarrollo/demo
-const isDevelopmentMode = !config.apiUrl.includes('esimportar.com');
-
 // Función para hacer peticiones a la API con manejo de errores
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${config.apiUrl}${endpoint}`;
@@ -39,6 +35,20 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   
   try {
     console.log(`Realizando petición a: ${url}`);
+    
+    // Si estamos en modo desarrollo de Lovable, usamos datos de demostración
+    if (config.isDevelopmentMode && endpoint === config.endpoints.clients) {
+      console.log("Utilizando datos de demostración en el entorno Lovable");
+      const cachedData = localStorage.getItem('demo_clients');
+      if (cachedData) {
+        return JSON.parse(cachedData) as T;
+      }
+      
+      // Si no hay datos en caché, creamos algunos clientes de ejemplo
+      const demoClients = createDemoClients();
+      localStorage.setItem('demo_clients', JSON.stringify(demoClients));
+      return demoClients as unknown as T;
+    }
     
     const response = await fetch(url, {
       ...options,
@@ -67,20 +77,116 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     console.error("API Error:", error);
     
     // En modo desarrollo o si la API no está disponible, podemos usar datos de demostración
-    if (isDevelopmentMode || (error instanceof Error && error.message.includes("Failed to fetch"))) {
+    if (endpoint === config.endpoints.clients) {
       console.warn("Utilizando datos de demostración debido a error de conexión con el API");
       
-      if (endpoint === config.endpoints.clients) {
-        // Cargar datos de demostración desde localStorage si existen
-        const cachedData = localStorage.getItem('demo_clients');
-        if (cachedData) {
-          return JSON.parse(cachedData) as T;
-        }
+      // Cargar datos de demostración desde localStorage si existen
+      const cachedData = localStorage.getItem('demo_clients');
+      if (cachedData) {
+        return JSON.parse(cachedData) as T;
       }
+      
+      // Si no hay datos en caché, creamos algunos clientes de ejemplo
+      const demoClients = createDemoClients();
+      localStorage.setItem('demo_clients', JSON.stringify(demoClients));
+      return demoClients as unknown as T;
     }
     
     throw error;
   }
+}
+
+// Función para crear datos de demostración
+function createDemoClients() {
+  const currentDate = new Date().toISOString();
+  
+  return [
+    {
+      id: "client-1",
+      name: "María González",
+      email: "maria@ejemplo.com",
+      phone: "123456789",
+      status: "active",
+      orders: [
+        {
+          id: "order-1",
+          clientId: "client-1",
+          productDescription: "iPhone 14 Pro",
+          store: "Apple Store",
+          trackingNumber: "AP123456789US",
+          status: "shipped_to_warehouse",
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          statusHistory: [
+            {
+              status: "purchased",
+              timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "shipped_to_warehouse",
+              timestamp: currentDate,
+              notificationSent: false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: "client-2",
+      name: "Juan Pérez",
+      email: "juan@ejemplo.com",
+      phone: "987654321",
+      status: "pending",
+      orders: []
+    },
+    {
+      id: "client-3",
+      name: "Luisa Rodríguez",
+      email: "luisa@ejemplo.com",
+      phone: "567891234",
+      status: "finished",
+      orders: [
+        {
+          id: "order-2",
+          clientId: "client-3",
+          productDescription: "MacBook Air M2",
+          store: "Amazon",
+          trackingNumber: "AMZ987654321US",
+          status: "arrived_in_argentina",
+          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          statusHistory: [
+            {
+              status: "purchased",
+              timestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "shipped_to_warehouse",
+              timestamp: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "received_at_warehouse",
+              timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "in_transit_to_argentina",
+              timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "arrived_in_argentina",
+              timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            }
+          ]
+        }
+      ]
+    }
+  ];
 }
 
 // Servicios para cada entidad de la API
