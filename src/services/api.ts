@@ -6,18 +6,44 @@ import config from "../config.js";
  * Este archivo se utilizará para conectar tu aplicación con el backend en Hostinger
  */
 
+// Token de autenticación
+let authToken: string | null = localStorage.getItem("auth_token");
+
+// Función para establecer el token de autenticación
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+  if (token) {
+    localStorage.setItem("auth_token", token);
+  } else {
+    localStorage.removeItem("auth_token");
+  }
+};
+
 // Función para hacer peticiones a la API con manejo de errores
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${config.apiUrl}${endpoint}`;
   
+  // Añadir token de autenticación si está disponible
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+  
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+  
   try {
     const response = await fetch(url, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
+      headers,
     });
+
+    // Si el token es inválido o ha expirado
+    if (response.status === 401) {
+      setAuthToken(null);
+      throw new Error("Sesión expirada. Por favor inicie sesión nuevamente.");
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({

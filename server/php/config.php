@@ -2,9 +2,9 @@
 <?php
 // Configuración de la base de datos - MODIFICAR con tus credenciales de Hostinger
 $db_host = 'localhost'; // Normalmente es localhost en Hostinger
-$db_name = 'u970205121_esimportar_dbe'; // Tu base de datos completa
-$db_user = 'usuario_bd'; // Reemplaza con tu nombre de usuario de base de datos real
-$db_pass = 'contraseña_bd'; // Reemplaza con tu contraseña de base de datos real
+$db_name = 'u970205121_esimportar_dbe'; // Tu base de datos
+$db_user = 'u970205121_esimportar_usr'; // Tu usuario de base de datos
+$db_pass = 'EsImportar2024*'; // Tu contraseña de base de datos
 
 // Configuración general
 $jwt_secret = 'clave_secreta_personalizada_esimportar'; // Cambia esto por una clave segura y única

@@ -21,6 +21,7 @@ export interface WhatsAppSettings {
 
 export interface AppContextType {
   clients: Client[];
+  loading: boolean;
   dashboardStats: DashboardStats;
   updateOrderStatus: (orderId: string, newStatus: ShippingStatus) => void;
   sendWhatsAppNotification: (order: Order, client: Client) => Promise<boolean>;

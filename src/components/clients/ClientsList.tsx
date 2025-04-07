@@ -12,12 +12,12 @@ import {
   TableHeader, 
   TableRow
 } from "@/components/ui/table";
-import { Package, Search, User } from "lucide-react";
+import { Package, Search, User, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ClientsList() {
-  const { clients, filterClients } = useApp();
+  const { clients, loading, filterClients } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
@@ -99,7 +99,16 @@ export function ClientsList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedClients.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10">
+                  <div className="flex justify-center items-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                    <p className="text-muted-foreground">Cargando clientes...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : sortedClients.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                   No se encontraron clientes
