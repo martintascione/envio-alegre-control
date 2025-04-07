@@ -1,3 +1,4 @@
+
 import config from "../config.js";
 import { toast } from "sonner";
 
@@ -36,9 +37,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Si estamos en modo desarrollo de Lovable, usamos datos de demostración
+    // Usamos datos de demostración solo en modo desarrollo local
     if (config.isDevelopmentMode && endpoint === config.endpoints.clients) {
-      console.log("Utilizando datos de demostración en el entorno Lovable");
+      console.log("Utilizando datos de demostración en modo desarrollo local");
       const cachedData = localStorage.getItem('demo_clients');
       if (cachedData) {
         return JSON.parse(cachedData) as T;
@@ -76,9 +77,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   } catch (error) {
     console.error("API Error:", error);
     
-    // En modo desarrollo o si la API no está disponible, podemos usar datos de demostración
-    if (endpoint === config.endpoints.clients) {
-      console.warn("Utilizando datos de demostración debido a error de conexión con el API");
+    // Solo usamos datos de demostración como fallback en modo desarrollo local
+    if (config.isDevelopmentMode && endpoint === config.endpoints.clients) {
+      console.warn("Modo desarrollo: Utilizando datos de demostración debido a error de conexión");
       
       // Cargar datos de demostración desde localStorage si existen
       const cachedData = localStorage.getItem('demo_clients');
@@ -90,6 +91,13 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       const demoClients = createDemoClients();
       localStorage.setItem('demo_clients', JSON.stringify(demoClients));
       return demoClients as unknown as T;
+    }
+    
+    // En producción, solo mostramos el error
+    if (error instanceof Error) {
+      toast.error(`Error de conexión: ${error.message}`, {
+        description: "Verifica la conexión con el servidor"
+      });
     }
     
     throw error;
