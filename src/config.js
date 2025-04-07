@@ -6,7 +6,7 @@
 
 const config = {
   // URL de la API en tu dominio de Hostinger
-  apiUrl: import.meta.env.VITE_API_URL || "https://tu-dominio.com/api", // Reemplaza con tu dominio real
+  apiUrl: "https://tu-dominio-esimportar.com/api", // Reemplaza con tu dominio real de Hostinger
   
   // Endpoints de la API
   endpoints: {
