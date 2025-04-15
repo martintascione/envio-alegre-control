@@ -26,8 +26,14 @@ export function ClientsList() {
     searchTerm
   );
   
+  // Validar que todos los clientes tienen un array de órdenes
+  const validClients = filteredClients.map(client => ({
+    ...client,
+    orders: Array.isArray(client.orders) ? client.orders : []
+  }));
+  
   // Ordenar por cantidad de pedidos (descendente)
-  const sortedClients = [...filteredClients].sort(
+  const sortedClients = [...validClients].sort(
     (a, b) => b.orders.length - a.orders.length
   );
 

@@ -35,10 +35,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log("Obteniendo datos de clientes de la API...");
       
       const data = await apiService.clients.getAll();
-      console.log(`Recibidos ${data.length} clientes de la API`);
       
-      setClients(data);
-      setDashboardStats(calculateDashboardStats(data));
+      // Verificar que los datos son un array y que cada cliente tiene un array de órdenes
+      if (Array.isArray(data)) {
+        // Verificar y reparar datos si es necesario
+        const validData = data.map(client => ({
+          ...client,
+          // Asegurarse de que orders sea siempre un array
+          orders: Array.isArray(client.orders) ? client.orders : []
+        }));
+        console.log(`Recibidos ${validData.length} clientes de la API`);
+        setClients(validData);
+        setDashboardStats(calculateDashboardStats(validData));
+      } else {
+        console.error("Datos de API no válidos:", data);
+        throw new Error("El formato de los datos recibidos no es válido");
+      }
+      
       setLastFetchTime(Date.now());
     } catch (error) {
       console.error("Error al cargar clientes:", error);
@@ -46,6 +59,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.error("Error al cargar datos de clientes", {
         description: "Verifica tu conexión e inténtalo nuevamente"
       });
+      
+      // Usar datos de respaldo predeterminados en caso de error
+      const defaultClients = [
+        {
+          id: "default-client-1",
+          name: "Cliente Predeterminado",
+          email: "cliente@ejemplo.com",
+          phone: "000000000",
+          status: "pending" as const,
+          orders: []
+        }
+      ];
+      
+      setClients(defaultClients);
+      setDashboardStats(calculateDashboardStats(defaultClients));
     } finally {
       setLoading(false);
     }

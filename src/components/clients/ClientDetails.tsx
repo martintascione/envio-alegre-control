@@ -12,6 +12,9 @@ interface ClientDetailsProps {
 }
 
 export function ClientDetails({ client }: ClientDetailsProps) {
+  // Asegurar que siempre tengamos un array de órdenes
+  const orders = Array.isArray(client.orders) ? client.orders : [];
+  
   const getStatusClass = (status: string) => {
     switch (status) {
       case "active":
@@ -47,7 +50,7 @@ export function ClientDetails({ client }: ClientDetailsProps) {
   };
 
   // Ordenar pedidos por fecha de actualización (más reciente primero)
-  const sortedOrders = [...client.orders].sort(
+  const sortedOrders = [...orders].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
@@ -82,25 +85,24 @@ export function ClientDetails({ client }: ClientDetailsProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="text-sm text-muted-foreground">Total de pedidos</div>
-              <div className="text-2xl font-bold mt-1">{client.orders.length}</div>
+              <div className="text-2xl font-bold mt-1">{orders.length}</div>
             </div>
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="text-sm text-muted-foreground">Pedidos completados</div>
               <div className="text-2xl font-bold mt-1">
-                {client.orders.filter(order => order.status === "arrived_in_argentina").length}
+                {orders.filter(order => order.status === "arrived_in_argentina").length}
               </div>
             </div>
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="text-sm text-muted-foreground">Pedidos en proceso</div>
               <div className="text-2xl font-bold mt-1">
-                {client.orders.filter(order => order.status !== "arrived_in_argentina").length}
+                {orders.filter(order => order.status !== "arrived_in_argentina").length}
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Eliminamos el TabsContent aquí y mostramos directamente la Card */}
       <Card>
         <CardHeader>
           <CardTitle>Pedidos del cliente</CardTitle>
@@ -148,4 +150,3 @@ export function ClientDetails({ client }: ClientDetailsProps) {
     </div>
   );
 }
-

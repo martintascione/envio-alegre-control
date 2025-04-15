@@ -9,8 +9,14 @@ import { useApp } from "@/contexts/AppContext";
 const Index = () => {
   const { dashboardStats, clients } = useApp();
   
+  // Asegurarnos de que cada cliente tiene un array de orders
+  const validClients = clients.map(client => ({
+    ...client,
+    orders: Array.isArray(client.orders) ? client.orders : []
+  }));
+  
   // Obtener clientes ordenados por actualización reciente
-  const recentClients = [...clients]
+  const recentClients = [...validClients]
     .sort((a, b) => {
       // Obtener la fecha de actualización más reciente de todos los pedidos de cada cliente
       const latestUpdateA = a.orders.reduce((latest, order) => {
@@ -39,7 +45,7 @@ const Index = () => {
         
         <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
           <RecentClients clients={recentClients} />
-          <RecentActivity clients={clients} />
+          <RecentActivity clients={validClients} />
         </div>
       </div>
     </MainLayout>

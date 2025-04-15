@@ -1,4 +1,3 @@
-
 import config from "../config.js";
 import { toast } from "sonner";
 
@@ -19,6 +18,99 @@ export const setAuthToken = (token: string | null) => {
     localStorage.removeItem("auth_token");
   }
 };
+
+// Función para crear datos de demostración
+function createDemoClients() {
+  const currentDate = new Date().toISOString();
+  
+  return [
+    {
+      id: "client-1",
+      name: "María González",
+      email: "maria@ejemplo.com",
+      phone: "123456789",
+      status: "active",
+      orders: [
+        {
+          id: "order-1",
+          clientId: "client-1",
+          productDescription: "iPhone 14 Pro",
+          store: "Apple Store",
+          trackingNumber: "AP123456789US",
+          status: "shipped_to_warehouse",
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          statusHistory: [
+            {
+              status: "purchased",
+              timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "shipped_to_warehouse",
+              timestamp: currentDate,
+              notificationSent: false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: "client-2",
+      name: "Juan Pérez",
+      email: "juan@ejemplo.com",
+      phone: "987654321",
+      status: "pending",
+      orders: []
+    },
+    {
+      id: "client-3",
+      name: "Luisa Rodríguez",
+      email: "luisa@ejemplo.com",
+      phone: "567891234",
+      status: "finished",
+      orders: [
+        {
+          id: "order-2",
+          clientId: "client-3",
+          productDescription: "MacBook Air M2",
+          store: "Amazon",
+          trackingNumber: "AMZ987654321US",
+          status: "arrived_in_argentina",
+          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          statusHistory: [
+            {
+              status: "purchased",
+              timestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "shipped_to_warehouse",
+              timestamp: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "received_at_warehouse",
+              timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "in_transit_to_argentina",
+              timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            },
+            {
+              status: "arrived_in_argentina",
+              timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+              notificationSent: true
+            }
+          ]
+        }
+      ]
+    }
+  ];
+}
 
 // Función para hacer peticiones a la API con manejo de errores
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -126,99 +218,6 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     
     throw error;
   }
-}
-
-// Función para crear datos de demostración
-function createDemoClients() {
-  const currentDate = new Date().toISOString();
-  
-  return [
-    {
-      id: "client-1",
-      name: "María González",
-      email: "maria@ejemplo.com",
-      phone: "123456789",
-      status: "active",
-      orders: [
-        {
-          id: "order-1",
-          clientId: "client-1",
-          productDescription: "iPhone 14 Pro",
-          store: "Apple Store",
-          trackingNumber: "AP123456789US",
-          status: "shipped_to_warehouse",
-          createdAt: currentDate,
-          updatedAt: currentDate,
-          statusHistory: [
-            {
-              status: "purchased",
-              timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-              notificationSent: true
-            },
-            {
-              status: "shipped_to_warehouse",
-              timestamp: currentDate,
-              notificationSent: false
-            }
-          ]
-        }
-      ]
-    },
-    {
-      id: "client-2",
-      name: "Juan Pérez",
-      email: "juan@ejemplo.com",
-      phone: "987654321",
-      status: "pending",
-      orders: []
-    },
-    {
-      id: "client-3",
-      name: "Luisa Rodríguez",
-      email: "luisa@ejemplo.com",
-      phone: "567891234",
-      status: "finished",
-      orders: [
-        {
-          id: "order-2",
-          clientId: "client-3",
-          productDescription: "MacBook Air M2",
-          store: "Amazon",
-          trackingNumber: "AMZ987654321US",
-          status: "arrived_in_argentina",
-          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          statusHistory: [
-            {
-              status: "purchased",
-              timestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-              notificationSent: true
-            },
-            {
-              status: "shipped_to_warehouse",
-              timestamp: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-              notificationSent: true
-            },
-            {
-              status: "received_at_warehouse",
-              timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-              notificationSent: true
-            },
-            {
-              status: "in_transit_to_argentina",
-              timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-              notificationSent: true
-            },
-            {
-              status: "arrived_in_argentina",
-              timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-              notificationSent: true
-            }
-          ]
-        }
-      ]
-    }
-  ];
 }
 
 // Servicios para cada entidad de la API

@@ -22,7 +22,13 @@ export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
-  const allOrders = clients.flatMap(client => 
+  // Asegúrate de que cada cliente tiene un array de orders
+  const validClients = clients.map(client => ({
+    ...client,
+    orders: Array.isArray(client.orders) ? client.orders : []
+  }));
+  
+  const allOrders = validClients.flatMap(client => 
     client.orders.map(order => ({
       ...order,
       clientName: client.name,
