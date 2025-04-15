@@ -58,8 +58,10 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Verificar si estamos en Lovable o un entorno local
-    if (window.location.hostname.includes('lovableproject.com') || window.location.hostname === 'localhost') {
+    // Verificar si estamos en un entorno de desarrollo o prueba
+    if (window.location.hostname.includes('lovableproject.com') || 
+        window.location.hostname === 'localhost' ||
+        config.isDevelopmentMode) {
       console.log("Entorno de desarrollo detectado, usando datos locales");
       const cachedData = localStorage.getItem('demo_clients');
       if (cachedData) {
@@ -72,12 +74,19 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       return emptyData as unknown as T;
     }
     
+    // Intentar conectar con timeout para evitar esperas largas
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+    
     const response = await fetch(url, {
       ...options,
       headers,
+      signal: controller.signal,
       // Asegurarnos de que no use caché
       cache: 'no-store',
     });
+    
+    clearTimeout(timeoutId);
 
     // Si el token es inválido o ha expirado
     if (response.status === 401) {
@@ -96,6 +105,11 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
         // Intentamos leer el cuerpo como texto primero
         const errorText = await response.text();
         
+        // Si el error contiene HTML, probablemente es una página de error
+        if (errorText.includes('<!DOCTYPE html>')) {
+          throw new Error("Error de conexión con el servidor. Posible problema con la URL de la API.");
+        }
+        
         // Intentamos parsear como JSON si parece ser un JSON
         if (contentType && contentType.includes("application/json")) {
           try {
@@ -107,10 +121,10 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
           }
         } else {
           // Si el servidor no devuelve JSON, mostramos el texto de error
-          errorMessage = errorText || "Error en la conexión con el servidor";
+          errorMessage = "Error en la conexión con el servidor";
         }
       } catch (e) {
-        errorMessage = "Error de conexión con el servidor";
+        errorMessage = "Error de conexión con el servidor. Verifica la URL de la API en la configuración.";
       }
       
       throw new Error(errorMessage);
@@ -119,7 +133,8 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     // Verificar que la respuesta es JSON antes de procesarla
     if (!contentType || !contentType.includes("application/json")) {
       console.error("La respuesta del servidor no es JSON:", await response.text());
-      throw new Error("La respuesta del servidor no es un JSON válido");
+      // Caemos al modo fallback
+      throw new Error("La respuesta del servidor no es un JSON válido. Usando datos locales.");
     }
 
     let data;
@@ -127,7 +142,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       data = await response.json();
     } catch (e) {
       console.error("Error al parsear respuesta JSON:", e);
-      throw new Error("Error al procesar la respuesta del servidor");
+      throw new Error("Error al procesar la respuesta del servidor. Usando datos locales.");
     }
     
     console.log(`Respuesta recibida de ${endpoint}:`, data);
@@ -141,9 +156,22 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   } catch (error) {
     console.error("API Error:", error);
     
-    // Usar datos locales como fallback si la conexión falla
+    // Mostrar mensaje de error más descriptivo
+    let errorMessage = "Error de conexión con el servidor";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      // Si es error de timeout/abort
+      if (error.name === 'AbortError') {
+        errorMessage = "La conexión tardó demasiado tiempo. Verifica la URL de la API.";
+      }
+    }
+    
+    // Usar datos locales como fallback para clientes
     if (endpoint === config.endpoints.clients) {
       console.warn("Usando datos locales debido a error de conexión");
+      toast.error(errorMessage, {
+        description: "Usando datos guardados localmente como respaldo"
+      });
       
       // Cargar datos de caché desde localStorage si existen
       const cachedData = localStorage.getItem('demo_clients');
@@ -158,11 +186,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     }
     
     // Mostrar el error al usuario
-    if (error instanceof Error) {
-      toast.error(`Error de conexión: ${error.message}`, {
-        description: "Verifica la conexión con el servidor"
-      });
-    }
+    toast.error(errorMessage, {
+      description: "Verifica la conexión con el servidor"
+    });
     
     throw error;
   }

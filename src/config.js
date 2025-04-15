@@ -8,7 +8,7 @@ const config = {
   // URL de la API en tu dominio de Hostinger
   apiUrl: window.location.hostname === 'localhost' 
     ? "http://localhost:8080/api" // Desarrollo local
-    : "https://grey-lion-594825.hostingersite.com/api", // URL específica de Hostinger
+    : "https://esimportar.com/api", // URL corregida para Hostinger
   
   // Modo de desarrollo (solo activar para pruebas locales)
   isDevelopmentMode: false,
@@ -33,7 +33,7 @@ const config = {
   notificationsEnabled: true,
   
   // Versión de la aplicación
-  version: "1.0.4"
+  version: "1.0.5"
 };
 
 export default config;
