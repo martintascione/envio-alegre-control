@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
@@ -56,16 +57,18 @@ export function NewClientDialog() {
   const onSubmit = async (data: ClientFormValues) => {
     try {
       setIsSubmitting(true);
-      const result = await addClient({
+      
+      // Call addClient without checking its return value
+      await addClient({
         name: data.name,
         email: data.email,
         phone: data.phone
       });
       
-      if (result) {
-        setOpen(false);
-        form.reset();
-      }
+      // Always close dialog and reset form after successful submission
+      setOpen(false);
+      form.reset();
+      
     } catch (error) {
       console.error("Error al crear el cliente:", error);
       toast.error("Error al crear el cliente");
