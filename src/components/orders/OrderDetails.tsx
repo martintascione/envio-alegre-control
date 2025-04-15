@@ -26,10 +26,11 @@ interface OrderDetailsProps {
 }
 
 export function OrderDetails({ order, client }: OrderDetailsProps) {
-  const { updateOrderStatus } = useApp();
+  const { updateOrderStatus, sendWhatsAppNotification } = useApp();
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<ShippingStatus | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   // Helper function to check if a date string is valid
   const isValidDate = (dateString: string | undefined) => {
@@ -94,27 +95,56 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
     }
   };
 
-  // Función alternativa para abrir WhatsApp directamente
-  const openWhatsAppDirectly = () => {
+  // Función para enviar mensaje por WhatsApp directo con el estado actual
+  const openWhatsAppDirectly = async () => {
     try {
+      setSendingMessage(true);
+      
+      // Crear un mensaje que corresponda al estado actual
+      const currentStatusMessage = `Hola ${client.name}, tu pedido "${order.productDescription}" de ${order.store} está en estado: ${shippingStatusMap[order.status]}`;
+      
       // Limpia el número de teléfono
       const cleanPhone = client.phone.replace(/[\s+\-()]/g, '');
       
-      // Crea un mensaje genérico sobre el estado actual
-      const message = `Hola ${client.name}, tu pedido "${order.productDescription}" está en estado: ${shippingStatusMap[order.status]}`;
-      
-      // Abre WhatsApp con el mensaje
-      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+      // Abre WhatsApp con el mensaje actualizado
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(currentStatusMessage)}`;
       window.open(whatsappUrl, "_blank");
       
       toast.success("WhatsApp abierto", {
-        description: "Se ha abierto WhatsApp con un mensaje predeterminado"
+        description: "Se ha abierto WhatsApp con un mensaje actualizado"
       });
     } catch (error) {
       console.error("Error al abrir WhatsApp:", error);
       toast.error("Error al abrir WhatsApp", {
         description: "No se pudo abrir WhatsApp. Verifica la conexión."
       });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+  
+  // Función para enviar mensaje usando el sistema de notificaciones
+  const sendNotification = async () => {
+    try {
+      setSendingMessage(true);
+      
+      // Usar el servicio de notificaciones que usa las plantillas
+      const success = await sendWhatsAppNotification(order, client);
+      
+      if (success) {
+        toast.success("Notificación enviada", {
+          description: `Se ha enviado notificación a ${client.name}`
+        });
+      } else {
+        throw new Error("No se pudo enviar la notificación");
+      }
+    } catch (error) {
+      console.error("Error al enviar notificación:", error);
+      toast.error("Error al enviar notificación", {
+        description: "Verifica la conexión e intenta nuevamente"
+      });
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -217,8 +247,9 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
             <Button 
               variant="outline" 
               onClick={openWhatsAppDirectly}
+              disabled={sendingMessage}
             >
-              Mensaje directo
+              {sendingMessage ? "Enviando..." : "Mensaje directo"}
             </Button>
           </div>
         </CardFooter>

@@ -21,6 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
   exit(0);
 }
 
+// Configuración de errores para depuración
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 // Manejador de errores personalizado para asegurar respuestas JSON válidas
 set_error_handler(function($severity, $message, $file, $line) {
   if (error_reporting() & $severity) {
@@ -36,6 +40,7 @@ try {
   $conn = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
   $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
   $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+  $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false); // Desactivar emulación para prepares
 } catch(PDOException $e) {
   http_response_code(500);
   echo json_encode(['error' => 'Error de conexión a la base de datos: ' . $e->getMessage()]);
@@ -45,22 +50,29 @@ try {
 // Función para responder con JSON
 function response($data, $status = 200) {
   http_response_code($status);
-  echo json_encode($data);
+  echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
   exit;
 }
 
 // Función para obtener el token JWT del encabezado Authorization
 function getAuthToken() {
   $headers = getallheaders(); // Usar getallheaders() es más confiable en algunos servidores
-  if (!isset($headers['Authorization']) && isset($headers['authorization'])) {
-    $headers['Authorization'] = $headers['authorization']; // Normalizar encabezados
+  
+  // Normalizar encabezados (los nombres pueden variar según el servidor)
+  $normalizedHeaders = [];
+  foreach ($headers as $key => $value) {
+    $normalizedHeaders[strtolower($key)] = $value;
   }
   
-  if (!isset($headers['Authorization'])) {
+  // Buscar el encabezado Authorization en cualquier variante de mayúsculas/minúsculas
+  $authHeader = $normalizedHeaders['authorization'] ?? null;
+  
+  if (!$authHeader) {
     return null;
   }
+  
   $matches = [];
-  preg_match('/Bearer\s(\S+)/', $headers['Authorization'], $matches);
+  preg_match('/Bearer\s(\S+)/', $authHeader, $matches);
   return $matches[1] ?? null;
 }
 
@@ -103,5 +115,18 @@ function requireAuth() {
   }
   
   return $payload;
+}
+
+// Función para logs del sistema (para depuración)
+function logActivity($message, $data = null) {
+  $logFile = __DIR__ . '/debug.log';
+  $timestamp = date('Y-m-d H:i:s');
+  $logMessage = "[$timestamp] $message";
+  
+  if ($data !== null) {
+    $logMessage .= ' - ' . json_encode($data, JSON_UNESCAPED_UNICODE);
+  }
+  
+  file_put_contents($logFile, $logMessage . PHP_EOL, FILE_APPEND);
 }
 ?>

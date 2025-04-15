@@ -1,3 +1,4 @@
+
 import config from "../config.js";
 import { toast } from "sonner";
 
@@ -57,9 +58,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Verificar si estamos en Lovable (entorno de desarrollo)
-    if (window.location.hostname.includes('lovableproject.com')) {
-      console.log("Entorno de desarrollo Lovable detectado, usando datos locales");
+    // Verificar si estamos en Lovable o un entorno local
+    if (window.location.hostname.includes('lovableproject.com') || window.location.hostname === 'localhost') {
+      console.log("Entorno de desarrollo detectado, usando datos locales");
       const cachedData = localStorage.getItem('demo_clients');
       if (cachedData) {
         return JSON.parse(cachedData) as T;
@@ -84,31 +85,51 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       throw new Error("Sesión expirada. Por favor inicie sesión nuevamente.");
     }
 
+    // Respuesta no es JSON o es un error
+    const contentType = response.headers.get("content-type");
+    
+    // Si la respuesta no es exitosa
     if (!response.ok) {
-      const contentType = response.headers.get("content-type");
       let errorMessage = `Error ${response.status}`;
       
-      if (contentType && contentType.includes("application/json")) {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-      } else {
-        // Si la respuesta no es JSON, usar el texto directamente
+      try {
+        // Intentamos leer el cuerpo como texto primero
         const errorText = await response.text();
-        console.error("Respuesta no JSON del servidor:", errorText);
-        errorMessage = "Error en el servidor. La respuesta no es un JSON válido.";
+        
+        // Intentamos parsear como JSON si parece ser un JSON
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch {
+            // Si no se puede parsear como JSON, usamos el texto directamente
+            errorMessage = errorText || errorMessage;
+          }
+        } else {
+          // Si el servidor no devuelve JSON, mostramos el texto de error
+          errorMessage = errorText || "Error en la conexión con el servidor";
+        }
+      } catch (e) {
+        errorMessage = "Error de conexión con el servidor";
       }
       
       throw new Error(errorMessage);
     }
 
     // Verificar que la respuesta es JSON antes de procesarla
-    const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       console.error("La respuesta del servidor no es JSON:", await response.text());
       throw new Error("La respuesta del servidor no es un JSON válido");
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (e) {
+      console.error("Error al parsear respuesta JSON:", e);
+      throw new Error("Error al procesar la respuesta del servidor");
+    }
+    
     console.log(`Respuesta recibida de ${endpoint}:`, data);
     
     // Si son clientes, guardar en localStorage como respaldo
@@ -136,7 +157,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       return emptyData as unknown as T;
     }
     
-    // En producción, mostramos el error
+    // Mostrar el error al usuario
     if (error instanceof Error) {
       toast.error(`Error de conexión: ${error.message}`, {
         description: "Verifica la conexión con el servidor"
@@ -204,7 +225,9 @@ export const apiService = {
         return newClient;
       } catch (error) {
         // Crear un cliente temporal con ID único si estamos en modo fallback
-        if (error instanceof Error && error.message.includes("Failed to fetch")) {
+        if (window.location.hostname.includes('lovableproject.com') || 
+            window.location.hostname === 'localhost' ||
+            (error instanceof Error && error.message.includes("conexión"))) {
           const newClient = {
             id: `client-${Date.now()}`,
             name: data.name,

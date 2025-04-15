@@ -1,4 +1,3 @@
-
 import { Client, Order, ShippingStatus } from "@/lib/types";
 import { toast } from "sonner";
 import { getClientById } from "./clientUtils";
@@ -21,12 +20,18 @@ const applyTemplateVariables = (
     year: 'numeric'
   }).format(estimatedDate);
 
-  return template
-    .replace(/\[cliente\]/g, client.name)
-    .replace(/\[comercio\]/g, order.store)
-    .replace(/\[pedido\]/g, order.productDescription)
+  let message = template
+    .replace(/\[cliente\]/g, client.name || "Cliente")
+    .replace(/\[comercio\]/g, order.store || "Tienda")
+    .replace(/\[pedido\]/g, order.productDescription || "Producto")
     .replace(/\[fecha\]/g, formattedEstimatedDate)
     .replace(/\[tracking\]/g, order.trackingNumber || "Sin número de tracking");
+    
+  if (!message.includes(shippingStatusMap[order.status])) {
+    message += `\n\nEstado actual: ${shippingStatusMap[order.status]}`;
+  }
+    
+  return message;
 };
 
 export const updateOrderStatus = (
@@ -35,23 +40,45 @@ export const updateOrderStatus = (
   orderId: string, 
   newStatus: ShippingStatus
 ) => {
+  console.log(`Actualizando estado del pedido ${orderId} a ${newStatus}`);
+  
+  if (!clients || !Array.isArray(clients) || clients.length === 0) {
+    console.error("Lista de clientes inválida al actualizar estado");
+    return clients;
+  }
+  
+  if (!orderId || !newStatus) {
+    console.error("ID de pedido o estado inválido");
+    return clients;
+  }
+  
   const updatedClients = clients.map(client => {
+    if (!client || !Array.isArray(client.orders)) {
+      return client;
+    }
+    
     const updatedOrders = client.orders.map(order => {
       if (order.id === orderId) {
-        const newStatusHistory = [
-          ...order.statusHistory,
-          {
+        const statusHistory = Array.isArray(order.statusHistory) ? 
+          [...order.statusHistory] : [];
+          
+        const statusExists = statusHistory.some(
+          history => history.status === newStatus
+        );
+        
+        if (!statusExists) {
+          statusHistory.push({
             status: newStatus,
             timestamp: new Date().toISOString(),
             notificationSent: false
-          }
-        ];
+          });
+        }
         
         return {
           ...order,
           status: newStatus,
           updatedAt: new Date().toISOString(),
-          statusHistory: newStatusHistory
+          statusHistory: statusHistory
         };
       }
       return order;
@@ -98,59 +125,41 @@ export const sendWhatsAppNotification = async (
     return false;
   }
 
-  console.log(`Enviando notificación desde ${whatsAppSettings.whatsappNumber} a ${client.name} (${client.phone}) para el pedido ${order.id}`);
-  console.log(`Estado actualizado a: ${shippingStatusMap[order.status]}`);
-  
-  let messageTemplate = whatsAppSettings.messageTemplates?.find(
-    template => template.status === order.status && template.enabled
-  );
-  
-  const message = messageTemplate 
-    ? applyTemplateVariables(messageTemplate.template, client, order)
-    : `Hola ${client.name}, tu pedido "${order.productDescription}" ha sido actualizado al estado: ${shippingStatusMap[order.status]}`;
-  
-  console.log("Mensaje a enviar:", message);
+  console.log(`Enviando notificación a ${client.name} (${client.phone}) para el pedido ${order.id}`);
+  console.log(`Estado actual del pedido: ${shippingStatusMap[order.status]}`);
   
   try {
-    let success = false;
+    let messageTemplate = whatsAppSettings.messageTemplates?.find(
+      template => template.status === order.status && template.enabled
+    );
     
-    // Comprueba si debemos usar el modo de respaldo directamente
-    if (config.whatsapp.fallbackMode || !whatsAppSettings.useWhatsAppAPI) {
-      // Método de respaldo: abrir directamente el enlace de WhatsApp
-      success = await sendFallbackWhatsAppLink(client.phone, message);
+    let message;
+    if (messageTemplate) {
+      message = applyTemplateVariables(messageTemplate.template, client, order);
     } else {
-      // Intenta primero el método de API
-      try {
-        const apiTimeout = new Promise<boolean>((_, reject) => {
-          setTimeout(() => reject(new Error("Timeout al contactar la API")), config.whatsapp.directLinkTimeout);
-        });
-        
-        const apiRequest = useWhatsAppApi(whatsAppSettings, client.phone, message);
-        
-        // Usar Promise.race para implementar un timeout
-        success = await Promise.race([apiRequest, apiTimeout]);
-      } catch (apiError) {
-        console.warn("Error al enviar por API de WhatsApp, usando método de respaldo:", apiError);
-        success = await sendFallbackWhatsAppLink(client.phone, message);
-      }
+      message = `Hola ${client.name}! soy *importBot* 🤖\n📦 Pedido ${order.store}.\n▪️ ${order.productDescription}\n✅ Estado actual: ${shippingStatusMap[order.status]}\n\n_Servicio de notificación automática._`;
     }
+    
+    console.log("Mensaje a enviar:", message);
+    
+    const success = await sendFallbackWhatsAppLink(client.phone, message);
     
     if (success) {
       toast.success(`Notificación enviada a ${client.name}`, {
         description: `Estado: ${shippingStatusMap[order.status]}`,
-        duration: 3000,
       });
       
       const updatedClients = clients.map(c => {
         if (c.id === client.id) {
           const updatedOrders = c.orders.map(o => {
             if (o.id === order.id) {
-              const updatedHistory = o.statusHistory.map((h, index) => {
-                if (index === o.statusHistory.length - 1) {
-                  return { ...h, notificationSent: true };
-                }
-                return h;
-              });
+              const updatedHistory = Array.isArray(o.statusHistory) ? 
+                o.statusHistory.map((h, index) => {
+                  if (h.status === order.status) {
+                    return { ...h, notificationSent: true };
+                  }
+                  return h;
+                }) : [];
               
               return { ...o, statusHistory: updatedHistory };
             }
@@ -163,6 +172,12 @@ export const sendWhatsAppNotification = async (
       });
       
       setClients(updatedClients);
+      
+      const localData = localStorage.getItem('demo_clients');
+      if (localData) {
+        localStorage.setItem('demo_clients', JSON.stringify(updatedClients));
+      }
+      
       return true;
     } else {
       throw new Error("Error al enviar mensaje");
@@ -176,86 +191,22 @@ export const sendWhatsAppNotification = async (
   }
 };
 
-// Función para usar la API de WhatsApp (solo si está configurada)
-const useWhatsAppApi = async (
-  whatsAppSettings: WhatsAppSettings, 
-  phone: string, 
-  message: string
-): Promise<boolean> => {
-  const apiEndpoint = "/api/send-whatsapp";
-  
-  const payload = {
-    to: phone,
-    from: whatsAppSettings.whatsappNumber,
-    message: message,
-    provider: whatsAppSettings.provider,
-    credentials: {
-      apiKey: whatsAppSettings.provider === "direct" ? whatsAppSettings.apiKey : undefined,
-      twilioSid: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAccountSid : undefined,
-      twilioToken: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAuthToken : undefined
-    }
-  };
-  
-  const response = await fetch(apiEndpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload)
-  });
-  
-  if (!response.ok) {
-    throw new Error("Error en la API de WhatsApp");
-  }
-  
-  const data = await response.json();
-  return data.success;
-};
-
-// Método alternativo: enlaces directos a WhatsApp (siempre funciona)
 const sendFallbackWhatsAppLink = async (phone: string, message: string): Promise<boolean> => {
   try {
-    // Limpia el número de teléfono y asegura que no tenga espacios o caracteres especiales
     const cleanPhone = phone.replace(/[\s+\-()]/g, '');
     
-    // Usa la API URL de WhatsApp
+    if (!cleanPhone || cleanPhone.length < 5) {
+      console.error("Número de teléfono inválido:", phone);
+      return false;
+    }
+    
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     console.log("Abriendo enlace de WhatsApp:", whatsappUrl);
     
-    // Abre en nueva pestaña
     window.open(whatsappUrl, "_blank");
     return true;
   } catch (error) {
     console.error("Error al abrir enlace de WhatsApp:", error);
-    return false;
-  }
-};
-
-// Funciones auxiliares para envío de mensajes (no implementadas en este ejemplo)
-const sendViaWhatsAppAPI = async (phone: string, message: string, apiKey: string): Promise<boolean> => {
-  try {
-    console.log(`Enviando mensaje a ${phone} usando la API de WhatsApp Business`);
-    console.log("Esta función debe implementarse en el servidor backend");
-    return true;
-  } catch (error) {
-    console.error("Error al enviar mensaje por WhatsApp API:", error);
-    return false;
-  }
-};
-
-const sendViaTwilio = async (
-  toPhone: string, 
-  message: string, 
-  fromPhone: string,
-  accountSid: string,
-  authToken: string
-): Promise<boolean> => {
-  try {
-    console.log(`Enviando mensaje a ${toPhone} usando Twilio`);
-    console.log("Esta función debe implementarse en el servidor backend");
-    return true;
-  } catch (error) {
-    console.error("Error al enviar mensaje por Twilio:", error);
     return false;
   }
 };

@@ -10,7 +10,7 @@ const config = {
     ? "http://localhost:8080/api" // Desarrollo local
     : "https://grey-lion-594825.hostingersite.com/api", // URL específica de Hostinger
   
-  // Modo de desarrollo desactivado para usar siempre la API real
+  // Modo de desarrollo (solo activar para pruebas locales)
   isDevelopmentMode: false,
   
   // Endpoints de la API
@@ -24,8 +24,8 @@ const config = {
   
   // Configuración WhatsApp
   whatsapp: {
-    fallbackMode: true, // Si es true, siempre usará el método de URL wa.me en caso de error
-    directLinkTimeout: 3000 // Tiempo máximo de espera para la API antes de usar fallback
+    fallbackMode: true, // Siempre usar el método de URL wa.me (método directo)
+    directLinkTimeout: 1000 // Tiempo de espera reducido para una experiencia más rápida
   },
   
   // Otros ajustes
@@ -33,7 +33,7 @@ const config = {
   notificationsEnabled: true,
   
   // Versión de la aplicación
-  version: "1.0.3"
+  version: "1.0.4"
 };
 
 export default config;
