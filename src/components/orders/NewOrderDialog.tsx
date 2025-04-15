@@ -51,6 +51,7 @@ type OrderFormValues = z.infer<typeof orderSchema>;
 export function NewOrderDialog() {
   const { clients, addOrder } = useApp();
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema),
@@ -62,20 +63,22 @@ export function NewOrderDialog() {
     },
   });
 
-  const onSubmit = (data: OrderFormValues) => {
+  const onSubmit = async (data: OrderFormValues) => {
     try {
+      setIsSubmitting(true);
       // Asegurarse de que todos los campos requeridos estén presentes
       if (!data.clientId || !data.productDescription || !data.store) {
         toast.error("Por favor complete todos los campos requeridos");
+        setIsSubmitting(false);
         return;
       }
       
       // Llama a la función addOrder con los datos validados
-      addOrder({
+      await addOrder({
         clientId: data.clientId,
         productDescription: data.productDescription,
         store: data.store,
-        trackingNumber: data.trackingNumber
+        trackingNumber: data.trackingNumber || ""
       });
       
       toast.success("Pedido creado correctamente");
@@ -84,6 +87,8 @@ export function NewOrderDialog() {
     } catch (error) {
       console.error("Error al crear el pedido:", error);
       toast.error("Error al crear el pedido");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -181,7 +186,9 @@ export function NewOrderDialog() {
               )}
             />
             <DialogFooter className="mt-6">
-              <Button type="submit" className="w-full sm:w-auto">Guardar Pedido</Button>
+              <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar Pedido"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

@@ -7,7 +7,7 @@ import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, PackageX, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWhatsAppSettings } from "@/contexts/useWhatsAppSettings";
 import {
   AlertDialog,
@@ -23,15 +23,47 @@ import {
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrderById, sendWhatsAppNotification, deleteOrder } = useApp();
+  const { getOrderById, sendWhatsAppNotification, deleteOrder, refreshData } = useApp();
   const { whatsAppSettings } = useWhatsAppSettings();
   const navigate = useNavigate();
   const [sending, setSending] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [orderData, setOrderData] = useState<ReturnType<typeof getOrderById>>(undefined);
+  const [loading, setLoading] = useState(true);
   
-  const orderData = getOrderById(orderId || "");
+  useEffect(() => {
+    const fetchOrderData = () => {
+      if (!orderId) {
+        setLoading(false);
+        return;
+      }
+      
+      const data = getOrderById(orderId);
+      setOrderData(data);
+      setLoading(false);
+      
+      // If order not found, refresh data once to try again
+      if (!data) {
+        refreshData();
+      }
+    };
+    
+    setLoading(true);
+    fetchOrderData();
+  }, [orderId, getOrderById, refreshData]);
   
-  if (!orderData) {
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[70vh]">
+          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p className="mt-4 text-muted-foreground">Cargando información del pedido...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+  
+  if (!orderData || !orderId) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center min-h-[70vh]">
@@ -53,6 +85,7 @@ const OrderDetailPage = () => {
   const handleDeleteOrder = () => {
     deleteOrder(order.id);
     navigate("/orders");
+    toast.success("Pedido eliminado correctamente");
   };
 
   const handleSendManualNotification = async () => {

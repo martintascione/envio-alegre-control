@@ -22,19 +22,18 @@ export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
-  // Helper function to check if a date string is valid - moved to the top
-  const isValidDate = (dateString: string) => {
+  // Helper function to check if a date string is valid
+  const isValidDate = (dateString: string | undefined) => {
     if (!dateString) return false;
     const d = new Date(dateString);
     return !isNaN(d.getTime());
   };
 
   // Format date helper function
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
     // Check if the date string is valid before formatting
-    if (!isValidDate(dateString)) {
-      console.error("Invalid date:", dateString);
-      return "Fecha inválida";
+    if (!dateString || !isValidDate(dateString)) {
+      return "Fecha no disponible";
     }
     
     return new Intl.DateTimeFormat('es-AR', {
@@ -61,6 +60,8 @@ export function OrdersList() {
   );
   
   const filteredOrders = allOrders.filter(order => {
+    if (!order || !order.productDescription) return false;
+    
     // Filtrar por estado
     if (statusFilter !== "all") {
       if (order.status !== statusFilter) {
@@ -72,9 +73,9 @@ export function OrdersList() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
-        order.productDescription.toLowerCase().includes(term) ||
-        order.store.toLowerCase().includes(term) ||
-        order.clientName.toLowerCase().includes(term) ||
+        (order.productDescription && order.productDescription.toLowerCase().includes(term)) ||
+        (order.store && order.store.toLowerCase().includes(term)) ||
+        (order.clientName && order.clientName.toLowerCase().includes(term)) ||
         (order.trackingNumber && order.trackingNumber.toLowerCase().includes(term))
       );
     }
@@ -146,15 +147,15 @@ export function OrdersList() {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-muted-foreground" />
-                      {order.productDescription}
+                      {order.productDescription || "Sin descripción"}
                     </div>
                   </TableCell>
                   <TableCell>
                     <Link to={`/clients/${order.clientId}`} className="hover:underline">
-                      {order.clientName}
+                      {order.clientName || "Cliente desconocido"}
                     </Link>
                   </TableCell>
-                  <TableCell>{order.store}</TableCell>
+                  <TableCell>{order.store || "Sin tienda"}</TableCell>
                   <TableCell>
                     <OrderStatusBadge status={order.status as ShippingStatus} />
                   </TableCell>
