@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
@@ -57,10 +56,16 @@ export function NewClientDialog() {
   const onSubmit = async (data: ClientFormValues) => {
     try {
       setIsSubmitting(true);
-      // No verificamos el resultado de addClient ya que puede devolver undefined o void
-      await addClient(data);
-      setOpen(false);
-      form.reset();
+      const result = await addClient({
+        name: data.name,
+        email: data.email,
+        phone: data.phone
+      });
+      
+      if (result) {
+        setOpen(false);
+        form.reset();
+      }
     } catch (error) {
       console.error("Error al crear el cliente:", error);
       toast.error("Error al crear el cliente");
