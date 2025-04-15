@@ -23,7 +23,7 @@ import {
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrderById, sendWhatsAppNotification, deleteOrder, refreshData } = useApp();
+  const { getOrderById, sendWhatsAppNotification, deleteOrder, refreshData, loading: appLoading } = useApp();
   const { whatsAppSettings } = useWhatsAppSettings();
   const navigate = useNavigate();
   const [sending, setSending] = useState(false);
@@ -32,25 +32,30 @@ const OrderDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   
+  // Cargar los datos del pedido cuando cambie el ID o se refresque
   useEffect(() => {
-    const fetchOrderData = () => {
+    const fetchOrderData = async () => {
       if (!orderId) {
         setLoading(false);
         return;
       }
       
-      const data = getOrderById(orderId);
-      console.log("Datos de pedido obtenidos:", data);
-      setOrderData(data);
-      
-      // Si el pedido no se encuentra, refrescar datos e intentar nuevamente (hasta 3 veces)
-      if (!data && retryCount < 3) {
-        console.log(`Intento ${retryCount + 1} de cargar pedido ${orderId}`);
-        setTimeout(() => {
-          refreshData();
+      try {
+        // Intentamos obtener el pedido
+        const data = getOrderById(orderId);
+        console.log(`Datos de pedido obtenidos:`, data);
+        setOrderData(data);
+        
+        // Si el pedido no se encuentra, refrescar datos e intentar nuevamente (hasta 3 veces)
+        if (!data && retryCount < 3) {
+          console.log(`Intento ${retryCount + 1} de cargar pedido ${orderId}`);
+          await refreshData();
           setRetryCount(prev => prev + 1);
-        }, 1000);
-      } else {
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error al cargar el pedido:", error);
         setLoading(false);
       }
     };
@@ -59,7 +64,8 @@ const OrderDetailPage = () => {
     fetchOrderData();
   }, [orderId, getOrderById, refreshData, retryCount]);
   
-  if (loading && retryCount < 3) {
+  // Mostrar estado de carga mientras se busca el pedido
+  if (loading || (appLoading && retryCount < 3)) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center min-h-[70vh]">
@@ -74,6 +80,7 @@ const OrderDetailPage = () => {
     );
   }
   
+  // Mostrar mensaje si no se encuentra el pedido
   if (!orderData || !orderId) {
     return (
       <MainLayout>

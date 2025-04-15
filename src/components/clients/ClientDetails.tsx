@@ -4,7 +4,7 @@ import { OrderStatusBadge } from "../orders/OrderStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Mail, Phone } from "lucide-react";
+import { Package, Mail, Phone, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface ClientDetailsProps {
@@ -21,8 +21,10 @@ export function ClientDetails({ client }: ClientDetailsProps) {
     status: client.status || "pending"
   };
   
-  // Asegurar que siempre tengamos un array de órdenes
-  const orders = Array.isArray(client.orders) ? client.orders : [];
+  // Asegurar que siempre tengamos un array de órdenes válidas
+  const orders = Array.isArray(client.orders) 
+    ? client.orders.filter(order => order && order.id)  // Filtrar órdenes inválidas
+    : [];
   
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -50,7 +52,9 @@ export function ClientDetails({ client }: ClientDetailsProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "Fecha desconocida";
+    
     try {
       return new Intl.DateTimeFormat('es-AR', {
         day: 'numeric',
@@ -67,7 +71,9 @@ export function ClientDetails({ client }: ClientDetailsProps) {
   const sortedOrders = [...orders].sort(
     (a, b) => {
       try {
-        return new Date(b.updatedAt || "").getTime() - new Date(a.updatedAt || "").getTime();
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
       } catch (e) {
         return 0;
       }
@@ -129,12 +135,13 @@ export function ClientDetails({ client }: ClientDetailsProps) {
         </CardHeader>
         <CardContent>
           {sortedOrders.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              Este cliente no tiene pedidos
+            <div className="flex flex-col items-center justify-center text-center py-8 text-muted-foreground">
+              <AlertCircle className="h-8 w-8 mb-2" />
+              <p>Este cliente no tiene pedidos</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedOrders.map(order => (
+              {sortedOrders.map((order) => (
                 <div 
                   key={order.id} 
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg"
@@ -148,7 +155,7 @@ export function ClientDetails({ client }: ClientDetailsProps) {
                       {order.store || "Sin tienda"} 
                       {order.trackingNumber ? ` · Tracking: ${order.trackingNumber}` : ''}
                       <div className="mt-1">
-                        Actualizado: {order.updatedAt ? formatDate(order.updatedAt) : "Sin fecha"}
+                        Actualizado: {formatDate(order.updatedAt)}
                       </div>
                     </div>
                   </div>

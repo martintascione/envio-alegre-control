@@ -8,7 +8,6 @@ import { useWhatsAppSettings } from "./useWhatsAppSettings";
 import { toast } from "sonner";
 import { apiService } from "@/services/api";
 
-// Constante para evitar múltiples fetchs durante la inicialización
 let isInitialLoad = true;
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -30,9 +29,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const { whatsAppSettings } = useWhatsAppSettings();
 
-  // Cargar clientes desde la API
   const fetchClients = async () => {
-    // Evitar múltiples llamadas simultáneas
     if (loading && !isInitialLoad) return;
     
     try {
@@ -42,28 +39,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       const data = await apiService.clients.getAll();
       
-      // Verificar que los datos son un array y que cada cliente tiene un array de órdenes
       if (Array.isArray(data)) {
-        // Verificar y reparar datos si es necesario
-        // Filtramos clientes sin nombre o con datos básicos vacíos
         const validData = data
           .filter(client => client && client.name && client.name !== "Cliente sin nombre")
           .map(client => ({
             ...client,
-            // Asegurarse de que orders sea siempre un array
             orders: Array.isArray(client.orders) ? client.orders : []
           }));
           
         console.log(`Recibidos ${validData.length} clientes de la API`);
         
-        // Conservar clientes añadidos localmente
         setClients(prevClients => {
-          // Filtrar clientes previos para mantener solo los añadidos localmente
           const localClients = prevClients.filter(
             client => locallyAddedClients.includes(client.id)
           );
           
-          // Combinar clientes locales con datos del servidor (evitando duplicados)
           const serverClientIds = validData.map(c => c.id);
           const nonDuplicateLocalClients = localClients.filter(
             client => !serverClientIds.includes(client.id)
@@ -86,7 +76,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: "Verifica tu conexión e inténtalo nuevamente"
       });
       
-      // Usar datos de respaldo predeterminados en caso de error
       const defaultClients = [
         {
           id: "default-client-1",
@@ -106,11 +95,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Cargar clientes al montar el componente
   useEffect(() => {
     fetchClients();
     
-    // Actualizar datos cada 60 segundos si la ventana está activa
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible' && !isInitialLoad) {
         fetchClients();
@@ -120,11 +107,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearInterval(interval);
   }, []);
 
-  // Escuchar eventos de visibilidad para recargar datos cuando el usuario regresa a la página
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && !isInitialLoad) {
-        // Solo recargar si han pasado al menos 30 segundos desde la última carga
         if (Date.now() - lastFetchTime > 30000) {
           fetchClients();
         }
@@ -137,7 +122,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [lastFetchTime]);
 
-  // Actualizar estadísticas cuando cambien los clientes
   useEffect(() => {
     if (Array.isArray(clients)) {
       setDashboardStats(calculateDashboardStats(clients));
@@ -157,14 +141,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: ShippingStatus) => {
     try {
-      // Primero actualizar en el backend
       const result = getOrderById(clients, orderId);
       if (!result) return;
       
       await apiService.orders.updateStatus(orderId, newStatus);
       console.log(`Estado actualizado en el servidor para orden ${orderId}: ${newStatus}`);
       
-      // Luego actualizar el estado local
       const updatedClients = updateOrderStatus(clients, setClients, orderId, newStatus);
       
       if (result) {
@@ -190,7 +172,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleFilterClients = (status?: string, searchTerm?: string): Client[] => {
-    // Asegurarnos de que hay clientes válidos antes de filtrarlos
     const validClients = Array.isArray(clients) ? clients.filter(client => 
       client && client.id && client.name && client.name !== "Cliente sin nombre"
     ) : [];
@@ -202,13 +183,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log("Creando nuevo cliente:", clientData);
       
-      // Verificar que no están vacíos los datos
       if (!clientData.name || !clientData.email || !clientData.phone) {
         toast.error("Los datos del cliente son incompletos");
         return;
       }
       
-      // Crear un cliente completo con todos los campos necesarios
       const clientId = `client-${Date.now()}`;
       const newClientFull: Client = {
         id: clientId,
@@ -219,30 +198,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         orders: []
       };
       
-      // Intentar guardar en el backend
       let newClient;
       try {
         newClient = await apiService.clients.create(clientData);
         console.log("Cliente creado en el servidor:", newClient);
       } catch (apiError) {
         console.warn("Error al crear cliente en API, usando cliente local:", apiError);
-        // Si falla la API, usamos nuestro cliente local
         newClient = newClientFull;
       }
       
-      // Asegurarnos de que el cliente tenga todos los campos requeridos
       const completeNewClient: Client = {
         ...newClientFull,
         ...newClient,
-        // Asegurarnos de que siempre tiene estos campos
         id: newClient.id || newClientFull.id,
         status: newClient.status || "pending",
         orders: Array.isArray(newClient.orders) ? newClient.orders : []
       };
       
-      // Actualizar el estado local
       setClients(prevClients => {
-        // Filtrar cualquier cliente duplicado o sin nombre antes de agregar el nuevo
         const filteredClients = prevClients.filter(c => 
           c && c.id && c.name && c.name !== "Cliente sin nombre" && 
           c.id !== completeNewClient.id && c.email !== completeNewClient.email
@@ -253,7 +226,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return updated;
       });
       
-      // Marcar este cliente como añadido localmente para preservarlo
       setLocallyAddedClients(prev => [...prev, completeNewClient.id]);
       
       toast.success(`Cliente ${clientData.name} creado`, {
@@ -272,36 +244,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log("Creando nuevo pedido:", orderData);
       
-      // Guardar en el backend
-      const newOrder = await apiService.orders.create(orderData);
-      console.log("Pedido creado en el servidor:", newOrder);
+      if (!orderData.clientId || !orderData.productDescription) {
+        toast.error("Datos de pedido incompletos");
+        return;
+      }
       
-      // Actualizar el estado local
-      const client = getClientById(clients, orderData.clientId);
-      if (!client) return;
+      const orderId = `order-${Date.now()}`;
+      const timestamp = new Date().toISOString();
+      
+      const newOrderFull: Order = {
+        id: orderId,
+        clientId: orderData.clientId,
+        productDescription: orderData.productDescription,
+        store: orderData.store || "Sin tienda",
+        trackingNumber: orderData.trackingNumber || "",
+        status: "purchased" as ShippingStatus,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        statusHistory: [
+          {
+            status: "purchased" as ShippingStatus,
+            timestamp: timestamp,
+            notificationSent: false
+          }
+        ]
+      };
+      
+      let savedOrder;
+      try {
+        savedOrder = await apiService.orders.create(orderData);
+        console.log("Pedido creado en el servidor:", savedOrder);
+      } catch (apiError) {
+        console.warn("Error al crear pedido en API, usando pedido local:", apiError);
+        savedOrder = newOrderFull;
+      }
+      
+      const completeOrder: Order = {
+        ...newOrderFull,
+        ...savedOrder,
+        id: savedOrder.id || newOrderFull.id,
+        clientId: orderData.clientId,
+        status: savedOrder.status || "purchased",
+        createdAt: savedOrder.createdAt || timestamp,
+        updatedAt: savedOrder.updatedAt || timestamp,
+        statusHistory: Array.isArray(savedOrder.statusHistory) ? savedOrder.statusHistory : newOrderFull.statusHistory
+      };
       
       setClients(prevClients => prevClients.map(c => {
         if (c.id === orderData.clientId) {
+          const currentOrders = Array.isArray(c.orders) ? c.orders : [];
+          
           const newStatus = c.status === "pending" ? "active" : c.status;
+          
           return {
             ...c,
-            orders: [...c.orders, newOrder],
-            status: newStatus
+            status: newStatus,
+            orders: [...currentOrders, completeOrder]
           };
         }
         return c;
       }));
       
-      toast.success(`Pedido creado para ${client.name}`, {
-        description: `${orderData.productDescription} - ${orderData.store}`,
+      const client = getClientById(clients, orderData.clientId);
+      
+      toast.success(`Pedido creado${client ? ` para ${client.name}` : ''}`, {
+        description: `${orderData.productDescription} - ${orderData.store || 'Sin tienda'}`,
       });
       
-      // Recargar datos para asegurar sincronización
-      setTimeout(() => fetchClients(), 1000);
+      setTimeout(() => refreshData(), 1000);
       
+      return completeOrder;
     } catch (error) {
       console.error("Error al crear pedido:", error);
       toast.error("Error al crear el pedido");
+      return null;
     }
   };
 
@@ -312,18 +328,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log(`Eliminando cliente ${clientId}...`);
       
-      // Eliminar en el backend
       await apiService.clients.delete(clientId);
       console.log(`Cliente ${clientId} eliminado en el servidor`);
       
-      // Actualizar el estado local
       setClients(prevClients => prevClients.filter(c => c.id !== clientId));
       
       toast.success(`Cliente ${client.name} eliminado`, {
         description: "El cliente ha sido eliminado correctamente",
       });
       
-      // Recargar datos para asegurar sincronización
       setTimeout(() => fetchClients(), 1000);
       
     } catch (error) {
@@ -341,16 +354,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log(`Eliminando pedido ${orderId}...`);
       
-      // Eliminar en el backend
       await apiService.orders.delete(orderId);
       console.log(`Pedido ${orderId} eliminado en el servidor`);
       
-      // Actualizar el estado local
       const updatedClients = clients.map(c => {
         if (c.id === client.id) {
           const updatedOrders = c.orders.filter(o => o.id !== orderId);
           
-          // Actualizar estado del cliente si es necesario
           let newStatus = c.status;
           if (updatedOrders.length === 0) {
             newStatus = "pending";
@@ -373,7 +383,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: `Se ha eliminado el pedido "${order.productDescription}" del cliente ${client.name}`,
       });
       
-      // Recargar datos para asegurar sincronización
       setTimeout(() => fetchClients(), 1000);
       
     } catch (error) {
@@ -382,7 +391,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Función para forzar una recarga de datos manteniendo los clientes locales
   const refreshData = () => {
     fetchClients();
   };

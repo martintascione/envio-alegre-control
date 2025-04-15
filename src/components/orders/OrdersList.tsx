@@ -14,15 +14,15 @@ import {
 } from "@/components/ui/table";
 import { ShippingStatus } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Package } from "lucide-react";
+import { Search, Package, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function OrdersList() {
-  const { clients } = useApp();
+  const { clients, loading } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
-  // Helper function to check if a date string is valid - moved to top of component
+  // Helper function to check if a date string is valid
   const isValidDate = (dateString: string | undefined) => {
     if (!dateString) return false;
     const d = new Date(dateString);
@@ -46,35 +46,33 @@ export function OrdersList() {
   const safeClients = Array.isArray(clients) ? clients : [];
   
   // Asegúrate de que cada cliente tiene un array de orders
-  const validClients = safeClients.map(client => {
-    if (!client) return { id: "unknown", name: "Cliente desconocido", orders: [] };
-    
-    return {
-      ...client,
-      orders: Array.isArray(client.orders) ? client.orders : []
-    };
-  });
-  
-  const allOrders = validClients.flatMap(client => 
-    client.orders.map(order => {
-      if (!order) return null;
-      
+  const validClients = safeClients
+    .filter(client => client && client.id) // Filtrar clientes inválidos o null
+    .map(client => {
       return {
-        ...order,
-        clientName: client.name || "Cliente desconocido",
-        clientId: client.id || "unknown"
+        ...client,
+        name: client.name || "Cliente desconocido",
+        orders: Array.isArray(client.orders) ? client.orders : []
       };
-    }).filter(Boolean) // Remove null entries
+    });
+  
+  // Obtener todas las órdenes válidas con datos del cliente
+  const allOrders = validClients.flatMap(client => 
+    client.orders
+      .filter(order => order && order.id && order.productDescription) // Solo órdenes válidas
+      .map(order => ({
+        ...order,
+        clientName: client.name,
+        clientId: client.id
+      }))
   );
   
+  console.log("Órdenes a mostrar:", allOrders);
+  
   const filteredOrders = allOrders.filter(order => {
-    if (!order || !order.productDescription) return false;
-    
     // Filtrar por estado
-    if (statusFilter !== "all") {
-      if (order.status !== statusFilter) {
-        return false;
-      }
+    if (statusFilter !== "all" && order.status !== statusFilter) {
+      return false;
     }
     
     // Filtrar por término de búsqueda
@@ -92,14 +90,12 @@ export function OrdersList() {
   });
   
   // Ordenar por fecha de actualización (más reciente primero)
-  const sortedOrders = filteredOrders.sort((a, b) => {
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
     // Ensure we have valid dates before sorting
     const dateA = isValidDate(a.updatedAt) ? new Date(a.updatedAt).getTime() : 0;
     const dateB = isValidDate(b.updatedAt) ? new Date(b.updatedAt).getTime() : 0;
     return dateB - dateA;
   });
-
-  console.log("Órdenes a mostrar:", sortedOrders);
 
   return (
     <div className="space-y-4">
@@ -145,10 +141,22 @@ export function OrdersList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedOrders.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-6">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="animate-spin h-6 w-6 border-2 border-primary rounded-full border-t-transparent mb-2"></div>
+                    <p className="text-muted-foreground">Cargando pedidos...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : sortedOrders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                  No se encontraron pedidos
+                  <div className="flex flex-col items-center justify-center">
+                    <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p>No se encontraron pedidos</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
