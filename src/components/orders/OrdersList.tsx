@@ -62,11 +62,27 @@ export function OrdersList() {
   });
   
   // Ordenar por fecha de actualización (más reciente primero)
-  const sortedOrders = filteredOrders.sort((a, b) => 
-    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  const sortedOrders = filteredOrders.sort((a, b) => {
+    // Ensure we have valid dates before sorting
+    const dateA = isValidDate(a.updatedAt) ? new Date(a.updatedAt).getTime() : 0;
+    const dateB = isValidDate(b.updatedAt) ? new Date(b.updatedAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  // Helper function to check if a date string is valid
+  const isValidDate = (dateString: string) => {
+    if (!dateString) return false;
+    const d = new Date(dateString);
+    return !isNaN(d.getTime());
+  };
 
   const formatDate = (dateString: string) => {
+    // Check if the date string is valid before formatting
+    if (!isValidDate(dateString)) {
+      console.error("Invalid date:", dateString);
+      return "Fecha inválida";
+    }
+    
     return new Intl.DateTimeFormat('es-AR', {
       day: 'numeric',
       month: 'short'
