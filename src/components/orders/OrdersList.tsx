@@ -22,6 +22,27 @@ export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
+  // Helper function to check if a date string is valid - moved to the top
+  const isValidDate = (dateString: string) => {
+    if (!dateString) return false;
+    const d = new Date(dateString);
+    return !isNaN(d.getTime());
+  };
+
+  // Format date helper function
+  const formatDate = (dateString: string) => {
+    // Check if the date string is valid before formatting
+    if (!isValidDate(dateString)) {
+      console.error("Invalid date:", dateString);
+      return "Fecha inválida";
+    }
+    
+    return new Intl.DateTimeFormat('es-AR', {
+      day: 'numeric',
+      month: 'short'
+    }).format(new Date(dateString));
+  };
+  
   // Verificar que clients es un array
   const safeClients = Array.isArray(clients) ? clients : [];
   
@@ -68,26 +89,6 @@ export function OrdersList() {
     const dateB = isValidDate(b.updatedAt) ? new Date(b.updatedAt).getTime() : 0;
     return dateB - dateA;
   });
-
-  // Helper function to check if a date string is valid
-  const isValidDate = (dateString: string) => {
-    if (!dateString) return false;
-    const d = new Date(dateString);
-    return !isNaN(d.getTime());
-  };
-
-  const formatDate = (dateString: string) => {
-    // Check if the date string is valid before formatting
-    if (!isValidDate(dateString)) {
-      console.error("Invalid date:", dateString);
-      return "Fecha inválida";
-    }
-    
-    return new Intl.DateTimeFormat('es-AR', {
-      day: 'numeric',
-      month: 'short'
-    }).format(new Date(dateString));
-  };
 
   return (
     <div className="space-y-4">
