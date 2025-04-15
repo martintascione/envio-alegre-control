@@ -21,13 +21,17 @@ export function ClientsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
+  // Verificamos que tenemos resultados válidos
   const filteredClients = filterClients(
     statusFilter === "all" ? undefined : statusFilter, 
     searchTerm
   );
   
+  // Asegurarnos de que estamos procesando un array
+  const safeFilteredClients = Array.isArray(filteredClients) ? filteredClients : [];
+  
   // Validar que todos los clientes tienen un array de órdenes
-  const validClients = filteredClients.map(client => ({
+  const validClients = safeFilteredClients.map(client => ({
     ...client,
     orders: Array.isArray(client.orders) ? client.orders : []
   }));

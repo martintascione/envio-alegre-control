@@ -22,8 +22,11 @@ export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
+  // Verificar que clients es un array
+  const safeClients = Array.isArray(clients) ? clients : [];
+  
   // Asegúrate de que cada cliente tiene un array de orders
-  const validClients = clients.map(client => ({
+  const validClients = safeClients.map(client => ({
     ...client,
     orders: Array.isArray(client.orders) ? client.orders : []
   }));

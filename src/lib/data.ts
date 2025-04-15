@@ -122,6 +122,20 @@ export const mockClients = generateMockClients();
 
 // Calcular estadísticas del dashboard
 export const calculateDashboardStats = (clients: Client[]): DashboardStats => {
+  // Verificar que clients es un array válido
+  if (!Array.isArray(clients)) {
+    console.warn("calculateDashboardStats recibió clients inválidos:", clients);
+    return {
+      totalClients: 0,
+      activeClients: 0,
+      pendingClients: 0,
+      finishedClients: 0,
+      totalOrders: 0,
+      pendingOrders: 0,
+      completedOrders: 0
+    };
+  }
+  
   const activeClients = clients.filter(client => client.status === "active").length;
   const pendingClients = clients.filter(client => client.status === "pending").length;
   const finishedClients = clients.filter(client => client.status === "finished").length;
@@ -131,7 +145,10 @@ export const calculateDashboardStats = (clients: Client[]): DashboardStats => {
   let totalOrders = 0;
   
   clients.forEach(client => {
-    client.orders.forEach(order => {
+    // Verificar que client.orders es un array válido antes de iterarlo
+    const orders = Array.isArray(client.orders) ? client.orders : [];
+    
+    orders.forEach(order => {
       totalOrders++;
       if (order.status === "arrived_in_argentina") {
         completedOrders++;

@@ -112,7 +112,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Actualizar estadísticas cuando cambien los clientes
   useEffect(() => {
-    setDashboardStats(calculateDashboardStats(clients));
+    if (Array.isArray(clients)) {
+      setDashboardStats(calculateDashboardStats(clients));
+    } else {
+      console.error("clients no es un array en useEffect:", clients);
+      setDashboardStats(calculateDashboardStats([]));
+    }
   }, [clients]);
 
   const handleGetClientById = (clientId: string): Client | undefined => {

@@ -9,11 +9,11 @@ import { useApp } from "@/contexts/AppContext";
 const Index = () => {
   const { dashboardStats, clients } = useApp();
   
-  // Asegurarnos de que cada cliente tiene un array de orders
-  const validClients = clients.map(client => ({
+  // Asegurarnos de que todos los clientes son válidos
+  const validClients = Array.isArray(clients) ? clients.map(client => ({
     ...client,
     orders: Array.isArray(client.orders) ? client.orders : []
-  }));
+  })) : [];
   
   // Obtener clientes ordenados por actualización reciente
   const recentClients = [...validClients]
