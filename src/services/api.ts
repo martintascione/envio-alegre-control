@@ -63,6 +63,12 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
         window.location.hostname === 'localhost' ||
         config.isDevelopmentMode) {
       console.log("Entorno de desarrollo detectado, usando datos locales");
+      
+      // Para todas las peticiones diferentes a clientes, devolvemos datos de demostración
+      if (endpoint !== config.endpoints.clients) {
+        return [] as unknown as T;
+      }
+      
       const cachedData = localStorage.getItem('demo_clients');
       if (cachedData) {
         return JSON.parse(cachedData) as T;
@@ -76,7 +82,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     
     // Intentar conectar con timeout para evitar esperas largas
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
     
     const response = await fetch(url, {
       ...options,
@@ -105,9 +111,10 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
         // Intentamos leer el cuerpo como texto primero
         const errorText = await response.text();
         
-        // Si el error contiene HTML, probablemente es una página de error
+        // Si el error contiene HTML, probablemente es una página de error de Hostinger
         if (errorText.includes('<!DOCTYPE html>')) {
-          throw new Error("Error de conexión con el servidor. Posible problema con la URL de la API.");
+          console.error("Error HTML recibido:", errorText.substring(0, 200) + "...");
+          throw new Error("Error de conexión: La URL de la API no es correcta o el servidor no está configurado adecuadamente.");
         }
         
         // Intentamos parsear como JSON si parece ser un JSON
@@ -120,11 +127,11 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
             errorMessage = errorText || errorMessage;
           }
         } else {
-          // Si el servidor no devuelve JSON, mostramos el texto de error
-          errorMessage = "Error en la conexión con el servidor";
+          // Si el servidor no devuelve JSON, mostramos un error más descriptivo
+          errorMessage = `Error en la conexión con el servidor (${response.status}): ${errorText.substring(0, 100)}...`;
         }
       } catch (e) {
-        errorMessage = "Error de conexión con el servidor. Verifica la URL de la API en la configuración.";
+        errorMessage = "Error de conexión con el servidor. Verifica la URL de la API y la estructura de archivos PHP.";
       }
       
       throw new Error(errorMessage);
@@ -132,9 +139,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
     // Verificar que la respuesta es JSON antes de procesarla
     if (!contentType || !contentType.includes("application/json")) {
-      console.error("La respuesta del servidor no es JSON:", await response.text());
+      console.error("La respuesta del servidor no es JSON. Contenido recibido:", await response.text());
       // Caemos al modo fallback
-      throw new Error("La respuesta del servidor no es un JSON válido. Usando datos locales.");
+      throw new Error("La respuesta del servidor no es un JSON válido. Comprueba que todos los archivos PHP devuelven JSON correctamente.");
     }
 
     let data;
@@ -142,7 +149,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       data = await response.json();
     } catch (e) {
       console.error("Error al parsear respuesta JSON:", e);
-      throw new Error("Error al procesar la respuesta del servidor. Usando datos locales.");
+      throw new Error("Error al procesar la respuesta del servidor. Comprueba que el JSON devuelto es válido.");
     }
     
     console.log(`Respuesta recibida de ${endpoint}:`, data);
@@ -162,7 +169,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       errorMessage = error.message;
       // Si es error de timeout/abort
       if (error.name === 'AbortError') {
-        errorMessage = "La conexión tardó demasiado tiempo. Verifica la URL de la API.";
+        errorMessage = "La conexión tardó demasiado tiempo. Verifica la URL de la API y la estructura del servidor.";
       }
     }
     
@@ -187,7 +194,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     
     // Mostrar el error al usuario
     toast.error(errorMessage, {
-      description: "Verifica la conexión con el servidor"
+      description: "Verifica la conexión con el servidor y la estructura de archivos PHP"
     });
     
     throw error;
