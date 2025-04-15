@@ -7,7 +7,7 @@
 const config = {
   // URL de la API en tu dominio de Hostinger
   apiUrl: window.location.hostname === 'localhost' 
-    ? "http://localhost/api" // Desarrollo local
+    ? "http://localhost:8080/api" // Desarrollo local
     : `https://${window.location.hostname}/api`, // Producción con el dominio real del sitio
   
   // Detección mejorada del modo de desarrollo
