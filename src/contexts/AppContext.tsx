@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Client, DashboardStats, Order, ShippingStatus } from "@/lib/types";
 import { calculateDashboardStats } from "@/lib/data";
@@ -19,6 +18,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const [locallyAddedClients, setLocallyAddedClients] = useState<string[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalClients: 0,
     activeClients: 0,
@@ -55,8 +55,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }));
           
         console.log(`Recibidos ${validData.length} clientes de la API`);
-        setClients(validData);
-        setDashboardStats(calculateDashboardStats(validData));
+        
+        // Conservar clientes añadidos localmente
+        setClients(prevClients => {
+          // Filtrar clientes previos para mantener solo los añadidos localmente
+          const localClients = prevClients.filter(
+            client => locallyAddedClients.includes(client.id)
+          );
+          
+          // Combinar clientes locales con datos del servidor (evitando duplicados)
+          const serverClientIds = validData.map(c => c.id);
+          const nonDuplicateLocalClients = localClients.filter(
+            client => !serverClientIds.includes(client.id)
+          );
+          
+          return [...validData, ...nonDuplicateLocalClients];
+        });
+        
+        setDashboardStats(calculateDashboardStats([...validData]));
       } else {
         console.error("Datos de API no válidos:", data);
         throw new Error("El formato de los datos recibidos no es válido");
@@ -96,7 +112,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     // Actualizar datos cada 60 segundos si la ventana está activa
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !isInitialLoad) {
         fetchClients();
       }
     }, 60000);
@@ -107,7 +123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Escuchar eventos de visibilidad para recargar datos cuando el usuario regresa a la página
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !isInitialLoad) {
         // Solo recargar si han pasado al menos 30 segundos desde la última carga
         if (Date.now() - lastFetchTime > 30000) {
           fetchClients();
@@ -193,8 +209,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       
       // Crear un cliente completo con todos los campos necesarios
+      const clientId = `client-${Date.now()}`;
       const newClientFull: Client = {
-        id: `client-${Date.now()}`,
+        id: clientId,
         name: clientData.name,
         email: clientData.email,
         phone: clientData.phone,
@@ -236,12 +253,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return updated;
       });
       
+      // Marcar este cliente como añadido localmente para preservarlo
+      setLocallyAddedClients(prev => [...prev, completeNewClient.id]);
+      
       toast.success(`Cliente ${clientData.name} creado`, {
         description: "El cliente ha sido agregado correctamente",
       });
-      
-      // Recargar datos para asegurar sincronización
-      setTimeout(() => fetchClients(), 1000);
       
       return completeNewClient;
     } catch (error) {
@@ -365,7 +382,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Función para forzar una recarga de datos
+  // Función para forzar una recarga de datos manteniendo los clientes locales
   const refreshData = () => {
     fetchClients();
   };

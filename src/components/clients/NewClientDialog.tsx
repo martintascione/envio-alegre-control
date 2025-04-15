@@ -59,14 +59,19 @@ export function NewClientDialog() {
         return;
       }
       
-      await addClient({
+      const result = await addClient({
         name: data.name,
         email: data.email,
         phone: data.phone
       });
       
-      form.reset();
-      setOpen(false);
+      if (result) {
+        console.log("Cliente creado exitosamente:", result);
+        form.reset();
+        setOpen(false);
+      } else {
+        toast.error("No se pudo crear el cliente");
+      }
     } catch (error) {
       console.error("Error al crear el cliente:", error);
       toast.error("Error al crear el cliente");

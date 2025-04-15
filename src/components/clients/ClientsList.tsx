@@ -1,6 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "@/contexts/AppContext";
+import { Client } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,43 +13,53 @@ import {
   TableHeader, 
   TableRow
 } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, Search, User, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ClientsList() {
   const { clients, loading, filterClients } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [displayedClients, setDisplayedClients] = useState<Client[]>([]);
   
-  // Verificamos que tenemos resultados válidos y filtramos clientes vacíos
-  const filteredClients = filterClients(
-    statusFilter === "all" ? undefined : statusFilter, 
-    searchTerm
-  ).filter(client => 
-    // Filtramos los clientes que tienen datos vacíos o nulos
-    client && client.id && client.name !== "Cliente sin nombre" && 
-    client.email !== "Sin email" && client.phone !== "Sin teléfono"
-  );
-  
-  // Asegurarnos de que estamos procesando un array
-  const safeFilteredClients = Array.isArray(filteredClients) ? filteredClients : [];
-  
-  // Validar que todos los clientes tienen datos básicos
-  const validClients = safeFilteredClients.map(client => ({
-    ...client,
-    id: client.id || `temp-${Date.now()}`,
-    name: client.name || "Cliente sin nombre",
-    email: client.email || "Sin email",
-    phone: client.phone || "Sin teléfono",
-    status: client.status || "pending",
-    orders: Array.isArray(client.orders) ? client.orders : []
-  }));
-  
-  // Ordenar por cantidad de pedidos (descendente)
-  const sortedClients = [...validClients].sort(
-    (a, b) => b.orders.length - a.orders.length
-  );
+  // Procesar clientes cuando cambien o se apliquen filtros
+  useEffect(() => {
+    console.log("Procesando lista de clientes:", clients.length, "clientes");
+    
+    // Verificamos que tenemos resultados válidos y filtramos clientes vacíos
+    const filtered = filterClients(
+      statusFilter === "all" ? undefined : statusFilter, 
+      searchTerm
+    ).filter(client => 
+      // Filtramos los clientes que tienen datos vacíos o nulos
+      client && client.id && client.name && client.name !== "Cliente sin nombre" && 
+      client.email && client.email !== "Sin email" && client.phone && client.phone !== "Sin teléfono"
+    );
+    
+    // Asegurarnos de que estamos procesando un array
+    const safeFilteredClients = Array.isArray(filtered) ? filtered : [];
+    
+    // Validar que todos los clientes tienen datos básicos
+    const validClients = safeFilteredClients.map(client => ({
+      ...client,
+      id: client.id || `temp-${Date.now()}`,
+      name: client.name || "Cliente sin nombre",
+      email: client.email || "Sin email",
+      phone: client.phone || "Sin teléfono",
+      status: client.status || "pending",
+      orders: Array.isArray(client.orders) ? client.orders : []
+    }));
+    
+    // Ordenar por cantidad de pedidos (descendente)
+    const sortedClients = [...validClients].sort(
+      (a, b) => b.orders.length - a.orders.length
+    );
+    
+    setDisplayedClients(sortedClients);
+    
+    console.log("Lista de clientes procesada:", sortedClients.length, "clientes válidos");
+  }, [clients, filterClients, searchTerm, statusFilter]);
 
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -127,14 +138,14 @@ export function ClientsList() {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : sortedClients.length === 0 ? (
+            ) : displayedClients.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                   No se encontraron clientes
                 </TableCell>
               </TableRow>
             ) : (
-              sortedClients.map((client) => (
+              displayedClients.map((client) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -147,7 +158,7 @@ export function ClientsList() {
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Package className="h-4 w-4 text-muted-foreground" />
-                      <span>{client.orders.length}</span>
+                      <span>{Array.isArray(client.orders) ? client.orders.length : 0}</span>
                     </div>
                   </TableCell>
                   <TableCell>

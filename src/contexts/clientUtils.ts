@@ -6,7 +6,15 @@ export const getClientById = (clients: Client[], clientId: string): Client | und
   // Verificar que clientes es un array válido y clientId no está vacío
   if (!Array.isArray(clients) || !clientId) return undefined;
   
-  return clients.find(client => client && client.id === clientId);
+  const client = clients.find(client => client && client.id === clientId);
+  
+  // Log para depuración
+  if (!client) {
+    console.log(`Intento de cargar cliente ${clientId} fallido - cliente no encontrado`);
+    console.log(`Clientes disponibles: ${clients.map(c => c?.id).join(', ')}`);
+  }
+  
+  return client;
 };
 
 export const getOrderById = (clients: Client[], orderId: string): {order: Order, client: Client} | undefined => {
@@ -40,9 +48,9 @@ export const filterClients = (clients: Client[], status?: string, searchTerm?: s
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
     filteredClients = filteredClients.filter(client => 
-      client.name.toLowerCase().includes(term) || 
-      client.email.toLowerCase().includes(term) ||
-      client.phone.includes(term)
+      (client.name && client.name.toLowerCase().includes(term)) || 
+      (client.email && client.email.toLowerCase().includes(term)) ||
+      (client.phone && client.phone.includes(term))
     );
   }
   
@@ -81,4 +89,6 @@ export const addClient = (
   toast.success(`Cliente ${clientData.name} creado`, {
     description: "El cliente ha sido agregado correctamente",
   });
+  
+  return newClient;
 };
