@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layouts/PageHeader";
 import { OrderDetails } from "@/components/orders/OrderDetails";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, PackageX, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, PackageX, Send, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useWhatsAppSettings } from "@/contexts/useWhatsAppSettings";
@@ -30,6 +30,7 @@ const OrderDetailPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [orderData, setOrderData] = useState<ReturnType<typeof getOrderById>>(undefined);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   
   useEffect(() => {
     const fetchOrderData = () => {
@@ -39,25 +40,35 @@ const OrderDetailPage = () => {
       }
       
       const data = getOrderById(orderId);
+      console.log("Datos de pedido obtenidos:", data);
       setOrderData(data);
-      setLoading(false);
       
-      // If order not found, refresh data once to try again
-      if (!data) {
-        refreshData();
+      // Si el pedido no se encuentra, refrescar datos e intentar nuevamente (hasta 3 veces)
+      if (!data && retryCount < 3) {
+        console.log(`Intento ${retryCount + 1} de cargar pedido ${orderId}`);
+        setTimeout(() => {
+          refreshData();
+          setRetryCount(prev => prev + 1);
+        }, 1000);
+      } else {
+        setLoading(false);
       }
     };
     
     setLoading(true);
     fetchOrderData();
-  }, [orderId, getOrderById, refreshData]);
+  }, [orderId, getOrderById, refreshData, retryCount]);
   
-  if (loading) {
+  if (loading && retryCount < 3) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center min-h-[70vh]">
-          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-          <p className="mt-4 text-muted-foreground">Cargando información del pedido...</p>
+          <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+          <p className="mt-4 text-muted-foreground">
+            {retryCount > 0 
+              ? `Intentando cargar datos del pedido... (intento ${retryCount}/3)` 
+              : 'Cargando información del pedido...'}
+          </p>
         </div>
       </MainLayout>
     );
@@ -81,6 +92,24 @@ const OrderDetailPage = () => {
   }
 
   const { order, client } = orderData;
+
+  // Verificar que el pedido tiene los datos mínimos necesarios
+  if (!order || !order.id || !client) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[70vh]">
+          <PackageX className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Datos de pedido incompletos</h2>
+          <p className="text-muted-foreground mb-4">
+            El pedido existe pero sus datos están incompletos.
+          </p>
+          <Button onClick={() => navigate("/orders")}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Volver a Pedidos
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   const handleDeleteOrder = () => {
     deleteOrder(order.id);
@@ -147,7 +176,7 @@ const OrderDetailPage = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Esta acción eliminará permanentemente el pedido "{order.productDescription}" del cliente {client.name}.
+                  Esta acción eliminará permanentemente el pedido "{order.productDescription || 'Sin descripción'}" del cliente {client.name || 'desconocido'}.
                   Esta acción no se puede deshacer.
                 </AlertDialogDescription>
               </AlertDialogHeader>

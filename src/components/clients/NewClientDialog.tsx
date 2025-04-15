@@ -24,12 +24,18 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
 const clientSchema = z.object({
-  name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres" }),
-  email: z.string().email({ message: "Email inválido" }),
-  phone: z.string().min(8, { message: "Teléfono inválido" })
+  name: z.string().min(2, { 
+    message: "El nombre debe tener al menos 2 caracteres" 
+  }),
+  email: z.string().email({ 
+    message: "Por favor ingrese un email válido" 
+  }),
+  phone: z.string().min(5, { 
+    message: "El teléfono debe tener al menos 5 caracteres" 
+  }),
 });
 
 type ClientFormValues = z.infer<typeof clientSchema>;
@@ -51,27 +57,10 @@ export function NewClientDialog() {
   const onSubmit = async (data: ClientFormValues) => {
     try {
       setIsSubmitting(true);
-      
-      // Ensure all required fields are present
-      if (!data.name || !data.email || !data.phone) {
-        toast.error("Por favor complete todos los campos");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const newClient = await addClient({
-        name: data.name,
-        email: data.email,
-        phone: data.phone
-      });
-      
-      if (newClient) {
-        console.log("Cliente creado exitosamente:", newClient);
-        form.reset();
-        setOpen(false);
-      } else {
-        toast.error("No se pudo crear el cliente");
-      }
+      // No verificamos el resultado de addClient ya que puede devolver undefined o void
+      await addClient(data);
+      setOpen(false);
+      form.reset();
     } catch (error) {
       console.error("Error al crear el cliente:", error);
       toast.error("Error al crear el cliente");
@@ -91,7 +80,7 @@ export function NewClientDialog() {
         <DialogHeader>
           <DialogTitle>Nuevo Cliente</DialogTitle>
           <DialogDescription>
-            Ingrese los datos del nuevo cliente. Haga clic en guardar cuando termine.
+            Complete los datos del nuevo cliente. Haga clic en guardar cuando termine.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -101,9 +90,9 @@ export function NewClientDialog() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre</FormLabel>
+                  <FormLabel>Nombre completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nombre completo" {...field} />
+                    <Input placeholder="Nombre del cliente" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,9 +103,9 @@ export function NewClientDialog() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Correo electrónico</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="email@ejemplo.com" {...field} />
+                    <Input type="email" placeholder="cliente@ejemplo.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -129,26 +118,15 @@ export function NewClientDialog() {
                 <FormItem>
                   <FormLabel>Teléfono</FormLabel>
                   <FormControl>
-                    <Input placeholder="+54 9 11 1234 5678" {...field} />
+                    <Input placeholder="+54 9 11 1234-5678" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter className="mt-6">
-              <Button 
-                type="submit" 
-                className="w-full sm:w-auto"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar Cliente'
-                )}
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar Cliente"}
               </Button>
             </DialogFooter>
           </form>
@@ -157,4 +135,3 @@ export function NewClientDialog() {
     </Dialog>
   );
 }
-

@@ -28,7 +28,18 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<ShippingStatus | null>(null);
 
-  const formatDate = (dateString: string) => {
+  // Helper function to check if a date string is valid
+  const isValidDate = (dateString: string | undefined) => {
+    if (!dateString) return false;
+    const d = new Date(dateString);
+    return !isNaN(d.getTime());
+  };
+
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString || !isValidDate(dateString)) {
+      return "Fecha no disponible";
+    }
+    
     return new Intl.DateTimeFormat('es-AR', {
       day: 'numeric',
       month: 'short',
@@ -64,6 +75,9 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
     }
   };
 
+  // Asegurar que haya un historial de estados válido
+  const safeStatusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+
   const nextStatus = getNextStatus();
 
   return (
@@ -74,10 +88,11 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
             <div>
               <CardTitle className="text-xl flex items-center">
                 <Package className="mr-2 h-5 w-5" /> 
-                {order.productDescription}
+                {order.productDescription || "Producto sin descripción"}
               </CardTitle>
               <CardDescription>
-                {order.store} {order.trackingNumber ? `· Tracking: ${order.trackingNumber}` : ''}
+                {order.store || "Tienda no especificada"} 
+                {order.trackingNumber ? `· Tracking: ${order.trackingNumber}` : ''}
               </CardDescription>
             </div>
             <OrderStatusBadge status={order.status} className="text-xs" />
@@ -88,9 +103,9 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
             <div>
               <h3 className="text-sm font-medium">Información del Cliente</h3>
               <div className="mt-2 text-sm">
-                <div className="font-medium">{client.name}</div>
-                <div className="text-muted-foreground">{client.email}</div>
-                <div className="text-muted-foreground">{client.phone}</div>
+                <div className="font-medium">{client.name || "Cliente sin nombre"}</div>
+                <div className="text-muted-foreground">{client.email || "Sin email"}</div>
+                <div className="text-muted-foreground">{client.phone || "Sin teléfono"}</div>
               </div>
             </div>
             
@@ -98,30 +113,38 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
             
             <div>
               <h3 className="text-sm font-medium">Historial de Estados</h3>
-              <div className="mt-3 space-y-3">
-                {order.statusHistory.map((statusChange, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <div className="mt-0.5">
-                      {statusChange.notificationSent ? (
-                        <Check className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Clock className="h-4 w-4 text-yellow-500" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">
-                        {shippingStatusMap[statusChange.status]}
+              {safeStatusHistory.length === 0 ? (
+                <div className="mt-3 p-3 bg-muted/50 rounded-md text-sm text-center">
+                  No hay historial de estados disponible
+                </div>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  {safeStatusHistory.map((statusChange, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <div className="mt-0.5">
+                        {statusChange.notificationSent ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-yellow-500" />
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDate(statusChange.timestamp)}
-                        {statusChange.notificationSent 
-                          ? " · Notificación enviada" 
-                          : " · Notificación pendiente"}
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">
+                          {statusChange.status && shippingStatusMap[statusChange.status] 
+                            ? shippingStatusMap[statusChange.status] 
+                            : "Estado desconocido"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {statusChange.timestamp ? formatDate(statusChange.timestamp) : "Sin fecha"} 
+                          {statusChange.notificationSent 
+                            ? " · Notificación enviada" 
+                            : " · Notificación pendiente"}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -163,10 +186,10 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
             <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
               <div className="text-sm">
-                <strong>Estado actual:</strong> {shippingStatusMap[order.status]}
+                <strong>Estado actual:</strong> {order.status && shippingStatusMap[order.status] || "Desconocido"}
                 <br />
                 <strong>Nuevo estado:</strong>{" "}
-                {selectedStatus ? shippingStatusMap[selectedStatus] : ""}
+                {selectedStatus && shippingStatusMap[selectedStatus] || ""}
               </div>
             </div>
           </div>

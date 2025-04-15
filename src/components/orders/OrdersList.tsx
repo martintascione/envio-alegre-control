@@ -22,7 +22,7 @@ export function OrdersList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
-  // Helper function to check if a date string is valid
+  // Helper function to check if a date string is valid - moved to top of component
   const isValidDate = (dateString: string | undefined) => {
     if (!dateString) return false;
     const d = new Date(dateString);
@@ -46,17 +46,25 @@ export function OrdersList() {
   const safeClients = Array.isArray(clients) ? clients : [];
   
   // Asegúrate de que cada cliente tiene un array de orders
-  const validClients = safeClients.map(client => ({
-    ...client,
-    orders: Array.isArray(client.orders) ? client.orders : []
-  }));
+  const validClients = safeClients.map(client => {
+    if (!client) return { id: "unknown", name: "Cliente desconocido", orders: [] };
+    
+    return {
+      ...client,
+      orders: Array.isArray(client.orders) ? client.orders : []
+    };
+  });
   
   const allOrders = validClients.flatMap(client => 
-    client.orders.map(order => ({
-      ...order,
-      clientName: client.name,
-      clientId: client.id
-    }))
+    client.orders.map(order => {
+      if (!order) return null;
+      
+      return {
+        ...order,
+        clientName: client.name || "Cliente desconocido",
+        clientId: client.id || "unknown"
+      };
+    }).filter(Boolean) // Remove null entries
   );
   
   const filteredOrders = allOrders.filter(order => {
@@ -90,6 +98,8 @@ export function OrdersList() {
     const dateB = isValidDate(b.updatedAt) ? new Date(b.updatedAt).getTime() : 0;
     return dateB - dateA;
   });
+
+  console.log("Órdenes a mostrar:", sortedOrders);
 
   return (
     <div className="space-y-4">
