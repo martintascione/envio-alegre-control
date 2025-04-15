@@ -9,6 +9,9 @@ import { useWhatsAppSettings } from "./useWhatsAppSettings";
 import { toast } from "sonner";
 import { apiService } from "@/services/api";
 
+// Constante para evitar múltiples fetchs durante la inicialización
+let isInitialLoad = true;
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -29,6 +32,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Cargar clientes desde la API
   const fetchClients = async () => {
+    // Evitar múltiples llamadas simultáneas
+    if (loading && !isInitialLoad) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -39,11 +45,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Verificar que los datos son un array y que cada cliente tiene un array de órdenes
       if (Array.isArray(data)) {
         // Verificar y reparar datos si es necesario
-        const validData = data.map(client => ({
-          ...client,
-          // Asegurarse de que orders sea siempre un array
-          orders: Array.isArray(client.orders) ? client.orders : []
-        }));
+        // Filtramos clientes sin nombre o con datos básicos vacíos
+        const validData = data
+          .filter(client => client && client.name && client.name !== "Cliente sin nombre")
+          .map(client => ({
+            ...client,
+            // Asegurarse de que orders sea siempre un array
+            orders: Array.isArray(client.orders) ? client.orders : []
+          }));
+          
         console.log(`Recibidos ${validData.length} clientes de la API`);
         setClients(validData);
         setDashboardStats(calculateDashboardStats(validData));
@@ -76,6 +86,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDashboardStats(calculateDashboardStats(defaultClients));
     } finally {
       setLoading(false);
+      isInitialLoad = false;
     }
   };
 
@@ -163,12 +174,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleFilterClients = (status?: string, searchTerm?: string): Client[] => {
-    return filterClients(clients, status, searchTerm);
+    // Asegurarnos de que hay clientes válidos antes de filtrarlos
+    const validClients = Array.isArray(clients) ? clients.filter(client => 
+      client && client.id && client.name && client.name !== "Cliente sin nombre"
+    ) : [];
+    
+    return filterClients(validClients, status, searchTerm);
   };
 
   const handleAddClient = async (clientData: { name: string; email: string; phone: string }) => {
     try {
       console.log("Creando nuevo cliente:", clientData);
+      
+      // Verificar que no están vacíos los datos
+      if (!clientData.name || !clientData.email || !clientData.phone) {
+        toast.error("Los datos del cliente son incompletos");
+        return;
+      }
       
       // Crear un cliente completo con todos los campos necesarios
       const newClientFull: Client = {
@@ -203,7 +225,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Actualizar el estado local
       setClients(prevClients => {
-        const updated = [...prevClients, completeNewClient];
+        // Filtrar cualquier cliente duplicado o sin nombre antes de agregar el nuevo
+        const filteredClients = prevClients.filter(c => 
+          c && c.id && c.name && c.name !== "Cliente sin nombre" && 
+          c.id !== completeNewClient.id && c.email !== completeNewClient.email
+        );
+        
+        const updated = [...filteredClients, completeNewClient];
         console.log("Estado local actualizado con el nuevo cliente");
         return updated;
       });

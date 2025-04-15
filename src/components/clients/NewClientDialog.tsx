@@ -59,7 +59,6 @@ export function NewClientDialog() {
         return;
       }
       
-      // Llamar a addClient y esperar a que termine
       await addClient({
         name: data.name,
         email: data.email,

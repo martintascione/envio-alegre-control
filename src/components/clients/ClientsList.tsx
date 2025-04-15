@@ -21,10 +21,14 @@ export function ClientsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
-  // Verificamos que tenemos resultados válidos
+  // Verificamos que tenemos resultados válidos y filtramos clientes vacíos
   const filteredClients = filterClients(
     statusFilter === "all" ? undefined : statusFilter, 
     searchTerm
+  ).filter(client => 
+    // Filtramos los clientes que tienen datos vacíos o nulos
+    client && client.id && client.name !== "Cliente sin nombre" && 
+    client.email !== "Sin email" && client.phone !== "Sin teléfono"
   );
   
   // Asegurarnos de que estamos procesando un array

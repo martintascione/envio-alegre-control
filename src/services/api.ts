@@ -112,6 +112,22 @@ function createDemoClients() {
   ];
 }
 
+// Función para limpiar datos de clientes en caché
+function cleanCachedClients(clients) {
+  if (!Array.isArray(clients)) return [];
+  
+  return clients.filter(client => 
+    client && 
+    client.id && 
+    client.name && 
+    client.name !== "Cliente sin nombre" && 
+    client.email && 
+    client.email !== "Sin email" && 
+    client.phone && 
+    client.phone !== "Sin teléfono"
+  );
+}
+
 // Función para hacer peticiones a la API con manejo de errores
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${config.apiUrl}${endpoint}`;
@@ -227,33 +243,51 @@ export const apiService = {
     getAll: async () => {
       try {
         const data = await fetchApi<any[]>(`${config.endpoints.clients}`);
+        
+        // Limpiar datos para eliminar clientes inválidos
+        const cleanedData = cleanCachedClients(data);
+        
         // Guardar datos en localStorage como respaldo
-        localStorage.setItem('demo_clients', JSON.stringify(data));
-        return data;
+        localStorage.setItem('demo_clients', JSON.stringify(cleanedData));
+        return cleanedData;
       } catch (error) {
         // Si ya tenemos datos en caché, los usamos como fallback
         const cachedData = localStorage.getItem('demo_clients');
         if (cachedData) {
           console.warn("Usando datos en caché debido a error de conexión");
-          return JSON.parse(cachedData);
+          const parsedData = JSON.parse(cachedData);
+          // Limpiar datos de caché antes de devolverlos
+          return cleanCachedClients(parsedData);
         }
         throw error;
       }
     },
     getById: (id: string) => fetchApi<any>(`${config.endpoints.clients}/${id}`),
     create: async (data: any) => {
+      // Verificar que los datos son válidos antes de crear el cliente
+      if (!data.name || !data.email || !data.phone) {
+        throw new Error("Datos de cliente incompletos");
+      }
+      
       try {
         const newClient = await fetchApi<any>(`${config.endpoints.clients}`, {
           method: "POST",
           body: JSON.stringify(data),
         });
         
+        // Verificar que el cliente creado es válido
+        if (!newClient || !newClient.id) {
+          throw new Error("El servidor devolvió un cliente inválido");
+        }
+        
         // Actualizar caché local
         const cachedData = localStorage.getItem('demo_clients');
         if (cachedData) {
           const clients = JSON.parse(cachedData);
-          clients.push(newClient);
-          localStorage.setItem('demo_clients', JSON.stringify(clients));
+          // Limpiar caché antes de agregar el nuevo cliente
+          const cleanedClients = cleanCachedClients(clients);
+          cleanedClients.push(newClient);
+          localStorage.setItem('demo_clients', JSON.stringify(cleanedClients));
         }
         
         return newClient;
@@ -275,8 +309,10 @@ export const apiService = {
           const cachedData = localStorage.getItem('demo_clients');
           if (cachedData) {
             const clients = JSON.parse(cachedData);
-            clients.push(newClient);
-            localStorage.setItem('demo_clients', JSON.stringify(clients));
+            // Limpiar caché antes de agregar el nuevo cliente
+            const cleanedClients = cleanCachedClients(clients);
+            cleanedClients.push(newClient);
+            localStorage.setItem('demo_clients', JSON.stringify(cleanedClients));
           } else {
             localStorage.setItem('demo_clients', JSON.stringify([newClient]));
           }
