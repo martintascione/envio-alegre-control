@@ -7,7 +7,7 @@ $db_user = 'u970205121_esimportar_usr'; // Tu usuario de base de datos
 $db_pass = 'EsImportar2024*'; // Tu contraseña de base de datos
 
 // Configuración general
-$jwt_secret = 'clave_secreta_personalizada_esimportar'; // Cambia esto por una clave segura y única
+$jwt_secret = 'W6MMqnx8nCe7HULf5Gez2Sp3d75PXbKvT9RjA4JYyFw'; // Clave segura generada aleatoriamente
 $jwt_expiration = 86400; // Tiempo de expiración del token (24 horas)
 
 // Configuración CORS (Cross-Origin Resource Sharing)
