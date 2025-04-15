@@ -170,13 +170,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log("Creando nuevo cliente:", clientData);
       
-      // Guardar en el backend
-      const newClient = await apiService.clients.create(clientData);
-      console.log("Cliente creado en el servidor:", newClient);
+      // Crear un cliente completo con todos los campos necesarios
+      const newClientFull: Client = {
+        id: `client-${Date.now()}`,
+        name: clientData.name,
+        email: clientData.email,
+        phone: clientData.phone,
+        status: "pending",
+        orders: []
+      };
+      
+      // Intentar guardar en el backend
+      let newClient;
+      try {
+        newClient = await apiService.clients.create(clientData);
+        console.log("Cliente creado en el servidor:", newClient);
+      } catch (apiError) {
+        console.warn("Error al crear cliente en API, usando cliente local:", apiError);
+        // Si falla la API, usamos nuestro cliente local
+        newClient = newClientFull;
+      }
+      
+      // Asegurarnos de que el cliente tenga todos los campos requeridos
+      const completeNewClient: Client = {
+        ...newClientFull,
+        ...newClient,
+        // Asegurarnos de que siempre tiene estos campos
+        id: newClient.id || newClientFull.id,
+        status: newClient.status || "pending",
+        orders: Array.isArray(newClient.orders) ? newClient.orders : []
+      };
       
       // Actualizar el estado local
       setClients(prevClients => {
-        const updated = [...prevClients, newClient];
+        const updated = [...prevClients, completeNewClient];
         console.log("Estado local actualizado con el nuevo cliente");
         return updated;
       });
@@ -188,9 +215,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Recargar datos para asegurar sincronización
       setTimeout(() => fetchClients(), 1000);
       
+      return completeNewClient;
     } catch (error) {
       console.error("Error al crear cliente:", error);
       toast.error("Error al crear el cliente");
+      throw error;
     }
   };
 

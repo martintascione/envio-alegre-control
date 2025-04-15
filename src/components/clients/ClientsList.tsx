@@ -30,9 +30,14 @@ export function ClientsList() {
   // Asegurarnos de que estamos procesando un array
   const safeFilteredClients = Array.isArray(filteredClients) ? filteredClients : [];
   
-  // Validar que todos los clientes tienen un array de órdenes
+  // Validar que todos los clientes tienen datos básicos
   const validClients = safeFilteredClients.map(client => ({
     ...client,
+    id: client.id || `temp-${Date.now()}`,
+    name: client.name || "Cliente sin nombre",
+    email: client.email || "Sin email",
+    phone: client.phone || "Sin teléfono",
+    status: client.status || "pending",
     orders: Array.isArray(client.orders) ? client.orders : []
   }));
   

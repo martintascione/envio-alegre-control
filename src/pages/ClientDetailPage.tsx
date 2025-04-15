@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layouts/PageHeader";
 import { ClientDetails } from "@/components/clients/ClientDetails";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trash2, UserX } from "lucide-react";
+import { ArrowLeft, Trash2, UserX, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -18,16 +18,56 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
-  const { getClientById, deleteClient } = useApp();
+  const { getClientById, deleteClient, loading, refreshData } = useApp();
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [client, setClient] = useState<ReturnType<typeof getClientById>>(undefined);
+  const [retryCount, setRetryCount] = useState(0);
   
-  const client = getClientById(clientId || "");
+  // Cargar datos del cliente y reintentar si es necesario
+  useEffect(() => {
+    const loadClient = () => {
+      if (!clientId) return;
+      
+      const currentClient = getClientById(clientId);
+      setClient(currentClient);
+      
+      // Si el cliente no se encuentra y estamos en los primeros 3 intentos, intentar recargar
+      if (!currentClient && retryCount < 3) {
+        console.log(`Intento ${retryCount + 1} de cargar cliente ${clientId}`);
+        setTimeout(() => {
+          refreshData();
+          setRetryCount(prev => prev + 1);
+        }, 1000);
+      } else {
+        setIsLoading(false);
+      }
+    };
+    
+    loadClient();
+  }, [clientId, getClientById, refreshData, retryCount]);
   
+  // Mostrar un estado de carga mientras intentamos obtener el cliente
+  if (loading || (isLoading && retryCount < 3)) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[70vh]">
+          <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Cargando cliente...</h2>
+          <p className="text-muted-foreground mb-4">
+            {retryCount > 0 ? `Intentando cargar datos (intento ${retryCount}/3)` : 'Obteniendo información del cliente'}
+          </p>
+        </div>
+      </MainLayout>
+    );
+  }
+  
+  // Si después de los intentos el cliente sigue sin encontrarse, mostrar error
   if (!client) {
     return (
       <MainLayout>

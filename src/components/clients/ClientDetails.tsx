@@ -12,6 +12,15 @@ interface ClientDetailsProps {
 }
 
 export function ClientDetails({ client }: ClientDetailsProps) {
+  // Asegurar que siempre tengamos datos válidos
+  const safeClient = {
+    ...client,
+    name: client.name || "Sin nombre",
+    email: client.email || "Sin email",
+    phone: client.phone || "Sin teléfono",
+    status: client.status || "pending"
+  };
+  
   // Asegurar que siempre tengamos un array de órdenes
   const orders = Array.isArray(client.orders) ? client.orders : [];
   
@@ -42,16 +51,27 @@ export function ClientDetails({ client }: ClientDetailsProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat('es-AR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    }).format(new Date(dateString));
+    try {
+      return new Intl.DateTimeFormat('es-AR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }).format(new Date(dateString));
+    } catch (e) {
+      console.error("Error al formatear fecha:", e);
+      return "Fecha desconocida";
+    }
   };
 
   // Ordenar pedidos por fecha de actualización (más reciente primero)
   const sortedOrders = [...orders].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    (a, b) => {
+      try {
+        return new Date(b.updatedAt || "").getTime() - new Date(a.updatedAt || "").getTime();
+      } catch (e) {
+        return 0;
+      }
+    }
   );
 
   return (
@@ -60,23 +80,23 @@ export function ClientDetails({ client }: ClientDetailsProps) {
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <CardTitle className="text-2xl">{client.name}</CardTitle>
+              <CardTitle className="text-2xl">{safeClient.name}</CardTitle>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
                 <div className="flex items-center text-muted-foreground">
                   <Mail className="h-4 w-4 mr-1" />
-                  {client.email}
+                  {safeClient.email}
                 </div>
                 <div className="flex items-center text-muted-foreground sm:ml-4">
                   <Phone className="h-4 w-4 mr-1" />
-                  {client.phone}
+                  {safeClient.phone}
                 </div>
               </div>
             </div>
             <Badge 
               variant="outline" 
-              className={`${getStatusClass(client.status)} text-sm px-3 py-1`}
+              className={`${getStatusClass(safeClient.status)} text-sm px-3 py-1`}
             >
-              {getStatusText(client.status)}
+              {getStatusText(safeClient.status)}
             </Badge>
           </div>
         </CardHeader>
@@ -122,13 +142,13 @@ export function ClientDetails({ client }: ClientDetailsProps) {
                   <div className="space-y-2">
                     <div className="font-medium flex items-center">
                       <Package className="h-4 w-4 mr-2 text-muted-foreground" />
-                      {order.productDescription}
+                      {order.productDescription || "Producto sin descripción"}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {order.store} 
+                      {order.store || "Sin tienda"} 
                       {order.trackingNumber ? ` · Tracking: ${order.trackingNumber}` : ''}
                       <div className="mt-1">
-                        Actualizado: {formatDate(order.updatedAt)}
+                        Actualizado: {order.updatedAt ? formatDate(order.updatedAt) : "Sin fecha"}
                       </div>
                     </div>
                   </div>

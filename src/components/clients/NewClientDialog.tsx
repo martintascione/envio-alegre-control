@@ -24,7 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 
 const clientSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres" }),
@@ -37,6 +37,7 @@ type ClientFormValues = z.infer<typeof clientSchema>;
 export function NewClientDialog() {
   const { addClient } = useApp();
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -47,26 +48,31 @@ export function NewClientDialog() {
     },
   });
 
-  const onSubmit = (data: ClientFormValues) => {
+  const onSubmit = async (data: ClientFormValues) => {
     try {
+      setIsSubmitting(true);
+      
       // Ensure all required fields are present
       if (!data.name || !data.email || !data.phone) {
         toast.error("Por favor complete todos los campos");
+        setIsSubmitting(false);
         return;
       }
       
-      addClient({
+      // Llamar a addClient y esperar a que termine
+      await addClient({
         name: data.name,
         email: data.email,
         phone: data.phone
       });
       
-      toast.success("Cliente creado correctamente");
       form.reset();
       setOpen(false);
     } catch (error) {
       console.error("Error al crear el cliente:", error);
       toast.error("Error al crear el cliente");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -126,7 +132,20 @@ export function NewClientDialog() {
               )}
             />
             <DialogFooter className="mt-6">
-              <Button type="submit" className="w-full sm:w-auto">Guardar Cliente</Button>
+              <Button 
+                type="submit" 
+                className="w-full sm:w-auto"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Guardar Cliente'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
