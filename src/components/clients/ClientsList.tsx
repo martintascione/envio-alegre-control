@@ -14,7 +14,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Search, User, Loader2 } from "lucide-react";
+import { Package, Search, User, Loader2, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function ClientsList() {
@@ -140,8 +140,14 @@ export function ClientsList() {
               </TableRow>
             ) : displayedClients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                  No se encontraron clientes
+                <TableCell colSpan={6} className="text-center py-12">
+                  <div className="flex flex-col items-center justify-center text-center space-y-3">
+                    <UserPlus className="h-12 w-12 text-muted-foreground" />
+                    <div>
+                      <p className="text-lg font-medium">No hay clientes registrados</p>
+                      <p className="text-muted-foreground">Agrega un cliente usando el botón "Nuevo Cliente"</p>
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
