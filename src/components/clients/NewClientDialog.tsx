@@ -59,14 +59,14 @@ export function NewClientDialog() {
         return;
       }
       
-      const result = await addClient({
+      const newClient = await addClient({
         name: data.name,
         email: data.email,
         phone: data.phone
       });
       
-      if (result) {
-        console.log("Cliente creado exitosamente:", result);
+      if (newClient) {
+        console.log("Cliente creado exitosamente:", newClient);
         form.reset();
         setOpen(false);
       } else {
@@ -157,3 +157,4 @@ export function NewClientDialog() {
     </Dialog>
   );
 }
+
