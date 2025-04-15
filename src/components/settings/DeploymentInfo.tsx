@@ -22,19 +22,18 @@ export function DeploymentInfo() {
           <AlertCircle className="h-4 w-4 text-amber-500" />
           <AlertTitle>Importante</AlertTitle>
           <AlertDescription>
-            Para que las notificaciones de WhatsApp funcionen a través de API y 
-            almacenar datos en la base de datos, necesitarás configurar el servidor backend.
+            Para almacenar datos en la base de datos, necesitarás completar la configuración del servidor backend.
           </AlertDescription>
         </Alert>
         
         <div className="space-y-2">
-          <h3 className="font-medium flex items-center gap-2"><Hammer className="h-4 w-4" /> Pasos previos a la construcción:</h3>
-          <ol className="list-decimal pl-5 space-y-2">
-            <li>Verifica que <code>src/config.js</code> esté configurado para usar la URL de tu API</li>
-            <li>Actualiza <code>server/php/config.php</code> con las credenciales de tu base de datos</li>
-            <li>Asegúrate de que todas las dependencias están instaladas: <code>npm install</code></li>
-            <li>Construye la aplicación: <code>npm run build</code></li>
-          </ol>
+          <h3 className="font-medium flex items-center gap-2"><Hammer className="h-4 w-4" /> Información del sitio:</h3>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>URL del sitio: <code>https://grey-lion-594825.hostingersite.com</code></li>
+            <li>Base de datos: <code>u970205121_esimportar_dbe</code></li>
+            <li>Usuario: <code>u970205121_martintascione</code></li>
+            <li>Estado: <span className="text-amber-600 font-medium">En desarrollo</span></li>
+          </ul>
         </div>
         
         <div className="space-y-2">
@@ -56,12 +55,11 @@ export function DeploymentInfo() {
         <div className="space-y-2">
           <h3 className="font-medium flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Pasos para el despliegue en Hostinger:</h3>
           <ol className="list-decimal pl-5 space-y-2">
+            <li>Ejecuta <code>npm run build</code> para generar la carpeta <code>dist</code></li>
             <li>Sube los archivos de la carpeta <code>dist</code> a tu directorio principal <code>public_html</code> en Hostinger</li>
             <li>Crea la carpeta <code>api</code> dentro de <code>public_html</code> (si no existe)</li>
             <li>Sube los archivos PHP de la carpeta <code>server/php</code> a tu directorio <code>api</code> en Hostinger</li>
-            <li>Crea una base de datos MySQL/MariaDB desde tu panel de Hostinger</li>
             <li>Importa el esquema SQL desde <code>server/database.sql</code> usando phpMyAdmin</li>
-            <li>Actualiza <code>api/config.php</code> con tus credenciales de base de datos</li>
           </ol>
         </div>
         
@@ -86,10 +84,10 @@ export function DeploymentInfo() {
         <div className="bg-gray-50 p-3 rounded-md border mt-2">
           <h4 className="font-medium">Pasos para verificar la instalación:</h4>
           <ol className="list-decimal pl-5 mt-1 space-y-1 text-sm">
-            <li>Accede a tu dominio principal en un navegador</li>
+            <li>Accede a tu sitio en <a href="https://grey-lion-594825.hostingersite.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">grey-lion-594825.hostingersite.com</a></li>
+            <li>Inicia sesión con el usuario: <code>admin</code> y contraseña: <code>admin123</code></li>
             <li>Intenta crear un nuevo cliente para verificar la conexión con la base de datos</li>
             <li>Verifica que no aparecen errores en la consola del navegador</li>
-            <li>Si encuentras problemas, verifica los logs de PHP en tu panel de Hostinger</li>
           </ol>
         </div>
       </CardContent>

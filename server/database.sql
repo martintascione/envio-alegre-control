@@ -96,8 +96,8 @@ INSERT INTO message_templates (status, template, enabled) VALUES
 ('in_transit_to_argentina', 'Hola [cliente]! soy *importBot* 🤖\n📦 Pedido [comercio].\n▪️ [pedido]\n✅ Tu pedido está en tránsito hacia Argentina.\n\n🚢 Fecha estimada de llegada: [fecha].\n\n_Servicio de notificación automática._', TRUE),
 ('arrived_in_argentina', 'Hola [cliente]! soy *importBot* 🤖\n📦 Pedido [comercio].\n▪️ [pedido]\n✅ ¡Tu pedido ha llegado a Argentina!\n\n📞 Nos contactaremos para coordinar la entrega.\n\n_Servicio de notificación automática._', TRUE);
 
--- Agregar un usuario administrador (cambiar por el usuario y contraseña que desees)
--- Importante: En producción, la contraseña debe estar encriptada con password_hash en PHP
+-- Agregar un usuario administrador con credenciales predeterminadas
+-- La contraseña por defecto es 'admin123' (está encriptada con password_hash en PHP)
 INSERT INTO users (username, password, name, email, role) VALUES 
 ('admin', '$2y$10$6jvQ0bDgh3z4bN0LbTxcw.ZfAIu9ocVQx6SCO9LjOfAZQZ8AopiYW', 'Administrador', 'admin@esimportar.com', 'admin');
--- Contraseña por defecto: admin123 (cambiar en producción)
+
