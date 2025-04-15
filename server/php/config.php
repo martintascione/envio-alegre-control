@@ -11,7 +11,7 @@ $jwt_secret = 'clave_secreta_personalizada_esimportar'; // Cambia esto por una c
 $jwt_expiration = 86400; // Tiempo de expiración del token (24 horas)
 
 // Configuración CORS (Cross-Origin Resource Sharing)
-header("Access-Control-Allow-Origin: *"); // En producción, cambiar * por tu dominio
+header("Access-Control-Allow-Origin: *"); // En producción, cambiar * por tu dominio específico
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
@@ -20,6 +20,16 @@ header("Content-Type: application/json; charset=UTF-8");
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
   exit(0);
 }
+
+// Manejador de errores personalizado para asegurar respuestas JSON válidas
+set_error_handler(function($severity, $message, $file, $line) {
+  if (error_reporting() & $severity) {
+    http_response_code(500);
+    echo json_encode(['error' => $message, 'file' => $file, 'line' => $line]);
+    exit;
+  }
+  return true;
+});
 
 // Conectar a la base de datos
 try {
@@ -41,7 +51,11 @@ function response($data, $status = 200) {
 
 // Función para obtener el token JWT del encabezado Authorization
 function getAuthToken() {
-  $headers = apache_request_headers();
+  $headers = getallheaders(); // Usar getallheaders() es más confiable en algunos servidores
+  if (!isset($headers['Authorization']) && isset($headers['authorization'])) {
+    $headers['Authorization'] = $headers['authorization']; // Normalizar encabezados
+  }
+  
   if (!isset($headers['Authorization'])) {
     return null;
   }

@@ -57,20 +57,6 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Solo usamos datos locales si explícitamente estamos en modo desarrollo
-    if (config.isDevelopmentMode && endpoint === config.endpoints.clients) {
-      console.log("Utilizando datos locales en modo desarrollo");
-      const cachedData = localStorage.getItem('demo_clients');
-      if (cachedData) {
-        return JSON.parse(cachedData) as T;
-      }
-      
-      // Si no hay datos en caché, creamos un array vacío
-      const emptyData = createEmptyData();
-      localStorage.setItem('demo_clients', JSON.stringify(emptyData));
-      return emptyData as unknown as T;
-    }
-    
     // Verificar si estamos en Lovable (entorno de desarrollo)
     if (window.location.hostname.includes('lovableproject.com')) {
       console.log("Entorno de desarrollo Lovable detectado, usando datos locales");
@@ -124,6 +110,12 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
     const data = await response.json();
     console.log(`Respuesta recibida de ${endpoint}:`, data);
+    
+    // Si son clientes, guardar en localStorage como respaldo
+    if (endpoint === config.endpoints.clients) {
+      localStorage.setItem('demo_clients', JSON.stringify(data));
+    }
+    
     return data;
   } catch (error) {
     console.error("API Error:", error);

@@ -50,17 +50,39 @@ function getClients() {
     $stmt->execute($params);
     $clients = $stmt->fetchAll();
     
+    // Si no hay clientes, devolver un array vacío para evitar errores
+    if (empty($clients)) {
+      response([]);
+      return;
+    }
+    
     // Para cada cliente, obtener sus pedidos
     foreach ($clients as &$client) {
       $stmt = $conn->prepare("SELECT * FROM orders WHERE client_id = ? ORDER BY created_at DESC");
       $stmt->execute([$client['id']]);
       $client['orders'] = $stmt->fetchAll();
       
+      // Asegurarse de que 'orders' siempre sea un array
+      if ($client['orders'] === false) {
+        $client['orders'] = [];
+      }
+      
       // Para cada pedido, obtener su historial de estados
       foreach ($client['orders'] as &$order) {
         $stmt = $conn->prepare("SELECT * FROM order_status_history WHERE order_id = ? ORDER BY timestamp ASC");
         $stmt->execute([$order['id']]);
         $order['status_history'] = $stmt->fetchAll();
+        
+        // Si no hay historial de estados, crear uno con el estado actual
+        if (empty($order['status_history'])) {
+          $order['status_history'] = [
+            [
+              'status' => $order['status'],
+              'timestamp' => $order['created_at'],
+              'notification_sent' => 0
+            ]
+          ];
+        }
         
         // Convertir nombres de columnas de snake_case a camelCase para mantener formato del frontend
         $order['clientId'] = $order['client_id'];
@@ -110,8 +132,8 @@ function createClient() {
     
     // Insertar cliente
     $stmt = $conn->prepare("
-      INSERT INTO clients (id, name, email, phone, status)
-      VALUES (?, ?, ?, ?, 'pending')
+      INSERT INTO clients (id, name, email, phone, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())
     ");
     
     $stmt->execute([
