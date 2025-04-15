@@ -57,9 +57,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Usamos datos vacíos solo en modo desarrollo
+    // Solo usamos datos locales si explícitamente estamos en modo desarrollo
     if (config.isDevelopmentMode && endpoint === config.endpoints.clients) {
-      console.log("Utilizando datos vacíos en modo desarrollo");
+      console.log("Utilizando datos locales en modo desarrollo");
       const cachedData = localStorage.getItem('demo_clients');
       if (cachedData) {
         return JSON.parse(cachedData) as T;
@@ -73,8 +73,16 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     
     // Verificar si estamos en Lovable (entorno de desarrollo)
     if (window.location.hostname.includes('lovableproject.com')) {
-      console.log("Entorno de desarrollo Lovable detectado, usando datos vacíos");
-      return [] as unknown as T;
+      console.log("Entorno de desarrollo Lovable detectado, usando datos locales");
+      const cachedData = localStorage.getItem('demo_clients');
+      if (cachedData) {
+        return JSON.parse(cachedData) as T;
+      }
+      
+      // Si no hay datos en caché, creamos un array vacío
+      const emptyData = createEmptyData();
+      localStorage.setItem('demo_clients', JSON.stringify(emptyData));
+      return emptyData as unknown as T;
     }
     
     const response = await fetch(url, {
@@ -120,9 +128,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   } catch (error) {
     console.error("API Error:", error);
     
-    // Usar datos vacíos como fallback
+    // Usar datos locales como fallback si la conexión falla
     if (endpoint === config.endpoints.clients) {
-      console.warn("Usando datos vacíos debido a error de conexión");
+      console.warn("Usando datos locales debido a error de conexión");
       
       // Cargar datos de caché desde localStorage si existen
       const cachedData = localStorage.getItem('demo_clients');

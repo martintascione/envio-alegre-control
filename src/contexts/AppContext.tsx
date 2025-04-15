@@ -38,6 +38,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log("Obteniendo datos de clientes de la API...");
       
       const data = await apiService.clients.getAll();
+      console.log("Datos recibidos de la API:", data);
       
       if (Array.isArray(data)) {
         const validData = data
@@ -59,10 +60,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             client => !serverClientIds.includes(client.id)
           );
           
-          return [...validData, ...nonDuplicateLocalClients];
+          const combinedClients = [...validData, ...nonDuplicateLocalClients];
+          console.log("Clientes combinados:", combinedClients.length);
+          return combinedClients;
         });
         
-        setDashboardStats(calculateDashboardStats([...validData]));
+        setDashboardStats(calculateDashboardStats(validData));
       } else {
         console.error("Datos de API no válidos:", data);
         throw new Error("El formato de los datos recibidos no es válido");
@@ -75,6 +78,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.error("Error al cargar datos de clientes", {
         description: "Verifica tu conexión e inténtalo nuevamente"
       });
+      
+      const cachedData = localStorage.getItem('demo_clients');
+      if (cachedData) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          if (Array.isArray(parsedData) && parsedData.length > 0) {
+            setClients(parsedData);
+            setDashboardStats(calculateDashboardStats(parsedData));
+            console.log("Usando datos en caché:", parsedData.length, "clientes");
+            return;
+          }
+        } catch (e) {
+          console.error("Error al parsear datos en caché:", e);
+        }
+      }
       
       const defaultClients = [
         {
@@ -202,9 +220,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         newClient = await apiService.clients.create(clientData);
         console.log("Cliente creado en el servidor:", newClient);
+        
+        setLocallyAddedClients(prev => 
+          prev.filter(id => id !== (newClient.id || newClientFull.id))
+        );
       } catch (apiError) {
         console.warn("Error al crear cliente en API, usando cliente local:", apiError);
         newClient = newClientFull;
+        
+        setLocallyAddedClients(prev => [...prev, newClientFull.id]);
       }
       
       const completeNewClient: Client = {
@@ -223,10 +247,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         const updated = [...filteredClients, completeNewClient];
         console.log("Estado local actualizado con el nuevo cliente");
+        
+        localStorage.setItem('demo_clients', JSON.stringify(updated));
+        
         return updated;
       });
-      
-      setLocallyAddedClients(prev => [...prev, completeNewClient.id]);
       
       toast.success(`Cliente ${clientData.name} creado`, {
         description: "El cliente ha sido agregado correctamente",
@@ -290,20 +315,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         statusHistory: Array.isArray(savedOrder.statusHistory) ? savedOrder.statusHistory : newOrderFull.statusHistory
       };
       
-      setClients(prevClients => prevClients.map(c => {
-        if (c.id === orderData.clientId) {
-          const currentOrders = Array.isArray(c.orders) ? c.orders : [];
-          
-          const newStatus = c.status === "pending" ? "active" : c.status;
-          
-          return {
-            ...c,
-            status: newStatus,
-            orders: [...currentOrders, completeOrder]
-          };
-        }
-        return c;
-      }));
+      setClients(prevClients => {
+        const updatedClients = prevClients.map(c => {
+          if (c.id === orderData.clientId) {
+            const currentOrders = Array.isArray(c.orders) ? c.orders : [];
+            
+            const newStatus = c.status === "pending" ? "active" : c.status;
+            
+            return {
+              ...c,
+              status: newStatus,
+              orders: [...currentOrders, completeOrder]
+            };
+          }
+          return c;
+        });
+        
+        localStorage.setItem('demo_clients', JSON.stringify(updatedClients));
+        
+        return updatedClients;
+      });
       
       const client = getClientById(clients, orderData.clientId);
       

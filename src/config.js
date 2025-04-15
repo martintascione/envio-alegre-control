@@ -10,9 +10,8 @@ const config = {
     ? "http://localhost:8080/api" // Desarrollo local
     : `https://${window.location.hostname}/api`, // Producción con el dominio real del sitio
   
-  // Detección mejorada del modo de desarrollo
-  isDevelopmentMode: window.location.hostname === 'localhost' || 
-                    window.location.hostname.includes('lovableproject.com'),
+  // Detección mejorada del modo de desarrollo - MODIFICADO para permitir conexión API en entorno de desarrollo
+  isDevelopmentMode: false, // Cambiado a false para que intente usar la API real
   
   // Endpoints de la API
   endpoints: {
@@ -34,7 +33,7 @@ const config = {
   notificationsEnabled: true,
   
   // Versión de la aplicación
-  version: "1.0.1"
+  version: "1.0.2"
 };
 
 export default config;
