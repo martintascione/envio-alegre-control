@@ -17,6 +17,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import config from "@/config";
 
 interface OrderDetailsProps {
   order: Order;
@@ -27,6 +29,7 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
   const { updateOrderStatus } = useApp();
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<ShippingStatus | null>(null);
+  const [updating, setUpdating] = useState(false);
 
   // Helper function to check if a date string is valid
   const isValidDate = (dateString: string | undefined) => {
@@ -68,10 +71,50 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
     setOpenDialog(true);
   };
 
-  const confirmUpdateStatus = () => {
+  const confirmUpdateStatus = async () => {
     if (selectedStatus) {
-      updateOrderStatus(order.id, selectedStatus);
-      setOpenDialog(false);
+      try {
+        setUpdating(true);
+        
+        // Intentar actualizar el estado
+        await updateOrderStatus(order.id, selectedStatus);
+        
+        setOpenDialog(false);
+        toast.success("Estado actualizado correctamente", {
+          description: `El pedido ahora está en estado: ${shippingStatusMap[selectedStatus]}`
+        });
+      } catch (error) {
+        console.error("Error al actualizar el estado:", error);
+        toast.error("Error al actualizar el estado", {
+          description: "Intenta nuevamente o actualiza la página"
+        });
+      } finally {
+        setUpdating(false);
+      }
+    }
+  };
+
+  // Función alternativa para abrir WhatsApp directamente
+  const openWhatsAppDirectly = () => {
+    try {
+      // Limpia el número de teléfono
+      const cleanPhone = client.phone.replace(/[\s+\-()]/g, '');
+      
+      // Crea un mensaje genérico sobre el estado actual
+      const message = `Hola ${client.name}, tu pedido "${order.productDescription}" está en estado: ${shippingStatusMap[order.status]}`;
+      
+      // Abre WhatsApp con el mensaje
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, "_blank");
+      
+      toast.success("WhatsApp abierto", {
+        description: "Se ha abierto WhatsApp con un mensaje predeterminado"
+      });
+    } catch (error) {
+      console.error("Error al abrir WhatsApp:", error);
+      toast.error("Error al abrir WhatsApp", {
+        description: "No se pudo abrir WhatsApp. Verifica la conexión."
+      });
     }
   };
 
@@ -155,20 +198,29 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
             <span>Actualizado: {formatDate(order.updatedAt)}</span>
           </div>
           
-          {nextStatus ? (
+          <div className="flex gap-2">
+            {nextStatus ? (
+              <Button 
+                className="flex-1" 
+                onClick={() => handleUpdateStatus(nextStatus)}
+              >
+                <SendHorizontal className="mr-2 h-4 w-4" />
+                Actualizar a: {shippingStatusMap[nextStatus]}
+              </Button>
+            ) : (
+              <Button variant="outline" className="flex-1" disabled>
+                <Check className="mr-2 h-4 w-4" />
+                Pedido completado
+              </Button>
+            )}
+            
             <Button 
-              className="w-full" 
-              onClick={() => handleUpdateStatus(nextStatus)}
+              variant="outline" 
+              onClick={openWhatsAppDirectly}
             >
-              <SendHorizontal className="mr-2 h-4 w-4" />
-              Actualizar a: {shippingStatusMap[nextStatus]}
+              Mensaje directo
             </Button>
-          ) : (
-            <Button variant="outline" className="w-full" disabled>
-              <Check className="mr-2 h-4 w-4" />
-              Pedido completado
-            </Button>
-          )}
+          </div>
         </CardFooter>
       </Card>
 
@@ -198,9 +250,18 @@ export function OrderDetails({ order, client }: OrderDetailsProps) {
             <DialogClose asChild>
               <Button variant="outline">Cancelar</Button>
             </DialogClose>
-            <Button onClick={confirmUpdateStatus}>
-              <SendHorizontal className="mr-2 h-4 w-4" />
-              Actualizar y notificar
+            <Button 
+              onClick={confirmUpdateStatus}
+              disabled={updating}
+            >
+              {updating ? (
+                <>Actualizando...</>
+              ) : (
+                <>
+                  <SendHorizontal className="mr-2 h-4 w-4" />
+                  Actualizar y notificar
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,8 +1,10 @@
+
 import { Client, Order, ShippingStatus } from "@/lib/types";
 import { toast } from "sonner";
 import { getClientById } from "./clientUtils";
 import { shippingStatusMap } from "@/lib/data";
 import { WhatsAppSettings, MessageTemplate } from "./types";
+import config from "@/config";
 
 const applyTemplateVariables = (
   template: string,
@@ -112,49 +114,25 @@ export const sendWhatsAppNotification = async (
   try {
     let success = false;
     
-    if (whatsAppSettings.useWhatsAppAPI) {
-      const apiEndpoint = "/api/send-whatsapp";
-      
-      const payload = {
-        to: client.phone,
-        from: whatsAppSettings.whatsappNumber,
-        message: message,
-        provider: whatsAppSettings.provider,
-        credentials: {
-          apiKey: whatsAppSettings.provider === "direct" ? whatsAppSettings.apiKey : undefined,
-          twilioSid: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAccountSid : undefined,
-          twilioToken: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAuthToken : undefined
-        }
-      };
-      
+    // Comprueba si debemos usar el modo de respaldo directamente
+    if (config.whatsapp.fallbackMode || !whatsAppSettings.useWhatsAppAPI) {
+      // Método de respaldo: abrir directamente el enlace de WhatsApp
+      success = await sendFallbackWhatsAppLink(client.phone, message);
+    } else {
+      // Intenta primero el método de API
       try {
-        const response = await fetch(apiEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload)
+        const apiTimeout = new Promise<boolean>((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout al contactar la API")), config.whatsapp.directLinkTimeout);
         });
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Error en el servidor");
-        }
+        const apiRequest = useWhatsAppApi(whatsAppSettings, client.phone, message);
         
-        const data = await response.json();
-        success = data.success;
+        // Usar Promise.race para implementar un timeout
+        success = await Promise.race([apiRequest, apiTimeout]);
       } catch (apiError) {
-        console.error("Error al comunicarse con el servidor:", apiError);
-        const whatsappUrl = `https://wa.me/${client.phone.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`;
-        console.log("Fallback a URL de WhatsApp (modo manual):", whatsappUrl);
-        window.open(whatsappUrl, "_blank");
-        success = true;
+        console.warn("Error al enviar por API de WhatsApp, usando método de respaldo:", apiError);
+        success = await sendFallbackWhatsAppLink(client.phone, message);
       }
-    } else {
-      const whatsappUrl = `https://wa.me/${client.phone.replace(/\+/g, '')}?text=${encodeURIComponent(message)}`;
-      console.log("URL de WhatsApp (demostración):", whatsappUrl);
-      window.open(whatsappUrl, "_blank");
-      success = true;
     }
     
     if (success) {
@@ -198,12 +176,66 @@ export const sendWhatsAppNotification = async (
   }
 };
 
+// Función para usar la API de WhatsApp (solo si está configurada)
+const useWhatsAppApi = async (
+  whatsAppSettings: WhatsAppSettings, 
+  phone: string, 
+  message: string
+): Promise<boolean> => {
+  const apiEndpoint = "/api/send-whatsapp";
+  
+  const payload = {
+    to: phone,
+    from: whatsAppSettings.whatsappNumber,
+    message: message,
+    provider: whatsAppSettings.provider,
+    credentials: {
+      apiKey: whatsAppSettings.provider === "direct" ? whatsAppSettings.apiKey : undefined,
+      twilioSid: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAccountSid : undefined,
+      twilioToken: whatsAppSettings.provider === "twilio" ? whatsAppSettings.twilioAuthToken : undefined
+    }
+  };
+  
+  const response = await fetch(apiEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  if (!response.ok) {
+    throw new Error("Error en la API de WhatsApp");
+  }
+  
+  const data = await response.json();
+  return data.success;
+};
+
+// Método alternativo: enlaces directos a WhatsApp (siempre funciona)
+const sendFallbackWhatsAppLink = async (phone: string, message: string): Promise<boolean> => {
+  try {
+    // Limpia el número de teléfono y asegura que no tenga espacios o caracteres especiales
+    const cleanPhone = phone.replace(/[\s+\-()]/g, '');
+    
+    // Usa la API URL de WhatsApp
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    console.log("Abriendo enlace de WhatsApp:", whatsappUrl);
+    
+    // Abre en nueva pestaña
+    window.open(whatsappUrl, "_blank");
+    return true;
+  } catch (error) {
+    console.error("Error al abrir enlace de WhatsApp:", error);
+    return false;
+  }
+};
+
+// Funciones auxiliares para envío de mensajes (no implementadas en este ejemplo)
 const sendViaWhatsAppAPI = async (phone: string, message: string, apiKey: string): Promise<boolean> => {
   try {
     console.log(`Enviando mensaje a ${phone} usando la API de WhatsApp Business`);
-    
     console.log("Esta función debe implementarse en el servidor backend");
-    
     return true;
   } catch (error) {
     console.error("Error al enviar mensaje por WhatsApp API:", error);
@@ -220,9 +252,7 @@ const sendViaTwilio = async (
 ): Promise<boolean> => {
   try {
     console.log(`Enviando mensaje a ${toPhone} usando Twilio`);
-    
     console.log("Esta función debe implementarse en el servidor backend");
-    
     return true;
   } catch (error) {
     console.error("Error al enviar mensaje por Twilio:", error);
@@ -246,14 +276,14 @@ export const addOrder = (
     id: `order-${Date.now()}`,
     clientId: orderData.clientId,
     productDescription: orderData.productDescription,
-    store: orderData.store,
+    store: orderData.store || "Sin tienda",
     trackingNumber: orderData.trackingNumber || undefined,
     status: "purchased",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     statusHistory: [
       {
-        status: "purchased",
+        status: "purchased" as ShippingStatus,
         timestamp: new Date().toISOString(),
         notificationSent: false
       }

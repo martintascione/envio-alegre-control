@@ -23,12 +23,18 @@ const config = {
     auth: "/auth"
   },
   
+  // Configuración WhatsApp
+  whatsapp: {
+    fallbackMode: true, // Si es true, siempre usará el método de URL wa.me en caso de error
+    directLinkTimeout: 3000 // Tiempo máximo de espera para la API antes de usar fallback
+  },
+  
   // Otros ajustes
   defaultLanguage: "es",
   notificationsEnabled: true,
   
   // Versión de la aplicación
-  version: "1.0.0"
+  version: "1.0.1"
 };
 
 export default config;
