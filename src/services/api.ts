@@ -19,36 +19,60 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
-// Función para probar la conexión al servidor
+// Función mejorada para probar la conexión al servidor
 export async function testConnection(): Promise<any> {
   try {
-    const url = `${config.apiUrl}${config.endpoints.test}`;
+    const url = `${config.apiUrl}${config.endpoints.test}?t=${Date.now()}`;
     console.log(`Probando conexión a: ${url}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.requestTimeout);
     
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "no-cache"
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
       },
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Error en la respuesta:", errorText);
-      throw new Error(`Error ${response.status}: ${errorText}`);
+      console.error(`Error ${response.status}: ${errorText}`);
+      throw new Error(`Error ${response.status}: ${errorText || 'Error desconocido del servidor'}`);
     }
 
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      console.error("Respuesta no es JSON:", text);
-      throw new Error("La respuesta del servidor no es un JSON válido");
+    // Intentar procesar la respuesta como JSON
+    try {
+      const contentType = response.headers.get("content-type");
+      
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Respuesta no es JSON:", text);
+        throw new Error(`La respuesta no es un JSON válido. Recibido: ${text.substring(0, 100)}...`);
+      }
+      
+      return await response.json();
+    } catch (parseError) {
+      console.error("Error al procesar JSON:", parseError);
+      
+      // Intentar leer el texto completo de la respuesta para diagnóstico
+      const responseText = await response.text();
+      console.error("Texto de respuesta:", responseText);
+      
+      throw new Error(`Error al procesar la respuesta: ${parseError.message}. Respuesta: ${responseText.substring(0, 100)}...`);
     }
-
-    return await response.json();
   } catch (error) {
     console.error("Error al probar conexión:", error);
+    
+    if (error.name === 'AbortError') {
+      throw new Error("La conexión ha excedido el tiempo de espera. Verifica que el servidor esté activo.");
+    }
+    
     throw error;
   }
 }

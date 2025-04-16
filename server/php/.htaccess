@@ -1,24 +1,32 @@
 
 # Permitir cross-origin desde cualquier dominio
 <IfModule mod_headers.c>
-    Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-</IfModule>
-
-# Configuración PHP específica
-<IfModule mod_php7.c>
-    php_flag display_errors Off
-    php_value error_reporting E_ALL
-</IfModule>
-
-# Para PHP 8+
-<IfModule mod_php.c>
-    php_flag display_errors Off
-    php_value error_reporting E_ALL
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    Header always set Content-Type "application/json; charset=UTF-8"
 </IfModule>
 
 # Manejar solicitudes OPTIONS para CORS preflight
 RewriteEngine On
 RewriteCond %{REQUEST_METHOD} OPTIONS
 RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Configurar PHP
+<IfModule mod_php7.c>
+    php_flag display_errors On
+    php_value error_reporting E_ALL
+    php_flag log_errors On
+    php_value error_log /tmp/php_errors.log
+</IfModule>
+
+# Para PHP 8+
+<IfModule mod_php.c>
+    php_flag display_errors On
+    php_value error_reporting E_ALL
+    php_flag log_errors On
+    php_value error_log /tmp/php_errors.log
+</IfModule>
+
+# Permitir que PHP muestre errores en desarrollo
+SetEnv DISPLAY_PHP_ERRORS 1
