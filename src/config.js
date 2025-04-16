@@ -10,8 +10,8 @@ const config = {
     ? "http://localhost:8080/api" // Desarrollo local
     : "https://grey-lion-594825.hostingersite.com/api", // URL para Hostinger
   
-  // Modo de desarrollo (ajustado para permitir conexión al servidor pero con fallback)
-  isDevelopmentMode: true, // Cambiado a true para permitir fallback a datos locales
+  // Modo de desarrollo (desactivado para forzar conexión al servidor)
+  isDevelopmentMode: false, // Cambiado a false para forzar la conexión con el servidor
   
   // Endpoints de la API
   endpoints: {

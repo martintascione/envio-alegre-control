@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/form";
 import { Plus, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import config from "@/config";
 
 const clientSchema = z.object({
   name: z.string().min(2, { 
@@ -93,7 +92,7 @@ export function NewClientDialog() {
       setServerError(errorMessage);
       
       toast.error("Error al crear el cliente", {
-        description: `${errorMessage}${config.isDevelopmentMode ? " (Usando modo de desarrollo)" : ""}`,
+        description: errorMessage
       });
     } finally {
       setIsSubmitting(false);
@@ -120,11 +119,6 @@ export function NewClientDialog() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               {serverError}
-              {config.isDevelopmentMode && (
-                <div className="mt-1 text-xs opacity-80">
-                  Modo de desarrollo activo: Los datos se guardarán localmente.
-                </div>
-              )}
             </AlertDescription>
           </Alert>
         )}
