@@ -58,108 +58,111 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Verificar si estamos en un entorno de desarrollo o prueba
-    if (window.location.hostname.includes('lovableproject.com') || 
-        window.location.hostname === 'localhost' ||
-        config.isDevelopmentMode) {
-      console.log("Entorno de desarrollo detectado, usando datos locales");
-      
-      // Para todas las peticiones diferentes a clientes, devolvemos datos de demostración
-      if (endpoint !== config.endpoints.clients) {
-        return [] as unknown as T;
-      }
-      
-      const cachedData = localStorage.getItem('demo_clients');
-      if (cachedData) {
-        return JSON.parse(cachedData) as T;
-      }
-      
-      // Si no hay datos en caché, creamos un array vacío
-      const emptyData = createEmptyData();
-      localStorage.setItem('demo_clients', JSON.stringify(emptyData));
-      return emptyData as unknown as T;
-    }
-    
+    // Primero intentamos siempre conectar con el servidor real, independientemente del modo
     // Intentar conectar con timeout para evitar esperas largas
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
     
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      signal: controller.signal,
-      // Asegurarnos de que no use caché
-      cache: 'no-store',
-    });
-    
-    clearTimeout(timeoutId);
-
-    // Si el token es inválido o ha expirado
-    if (response.status === 401) {
-      setAuthToken(null);
-      throw new Error("Sesión expirada. Por favor inicie sesión nuevamente.");
-    }
-
-    // Respuesta no es JSON o es un error
-    const contentType = response.headers.get("content-type");
-    
-    // Si la respuesta no es exitosa
-    if (!response.ok) {
-      let errorMessage = `Error ${response.status}`;
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+        // Asegurarnos de que no use caché
+        cache: 'no-store',
+      });
       
-      try {
-        // Intentamos leer el cuerpo como texto primero
-        const errorText = await response.text();
+      clearTimeout(timeoutId);
+  
+      // Si el token es inválido o ha expirado
+      if (response.status === 401) {
+        setAuthToken(null);
+        throw new Error("Sesión expirada. Por favor inicie sesión nuevamente.");
+      }
+  
+      // Respuesta no es JSON o es un error
+      const contentType = response.headers.get("content-type");
+      
+      // Si la respuesta no es exitosa
+      if (!response.ok) {
+        let errorMessage = `Error ${response.status}`;
         
-        // Si el error contiene HTML, probablemente es una página de error de Hostinger
-        if (errorText.includes('<!DOCTYPE html>')) {
-          console.error("Error HTML recibido:", errorText.substring(0, 200) + "...");
-          throw new Error("Error de conexión: La URL de la API no es correcta o el servidor no está configurado adecuadamente.");
-        }
-        
-        // Intentamos parsear como JSON si parece ser un JSON
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.message || errorData.error || errorMessage;
-          } catch {
-            // Si no se puede parsear como JSON, usamos el texto directamente
-            errorMessage = errorText || errorMessage;
+        try {
+          // Intentamos leer el cuerpo como texto primero
+          const errorText = await response.text();
+          
+          // Si el error contiene HTML, probablemente es una página de error de Hostinger
+          if (errorText.includes('<!DOCTYPE html>')) {
+            console.error("Error HTML recibido:", errorText.substring(0, 200) + "...");
+            throw new Error("Error de conexión: La URL de la API no es correcta o el servidor no está configurado adecuadamente.");
           }
-        } else {
-          // Si el servidor no devuelve JSON, mostramos un error más descriptivo
-          errorMessage = `Error en la conexión con el servidor (${response.status}): ${errorText.substring(0, 100)}...`;
+          
+          // Intentamos parsear como JSON si parece ser un JSON
+          if (contentType && contentType.includes("application/json")) {
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch {
+              // Si no se puede parsear como JSON, usamos el texto directamente
+              errorMessage = errorText || errorMessage;
+            }
+          } else {
+            // Si el servidor no devuelve JSON, mostramos un error más descriptivo
+            errorMessage = `Error en la conexión con el servidor (${response.status}): ${errorText.substring(0, 100)}...`;
+          }
+        } catch (e) {
+          errorMessage = "Error de conexión con el servidor. Verifica la URL de la API y la estructura de archivos PHP.";
         }
+        
+        throw new Error(errorMessage);
+      }
+  
+      // Verificar que la respuesta es JSON antes de procesarla
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("La respuesta del servidor no es JSON. Contenido recibido:", await response.text());
+        throw new Error("La respuesta del servidor no es un JSON válido. Comprueba que todos los archivos PHP devuelven JSON correctamente.");
+      }
+  
+      let data;
+      try {
+        data = await response.json();
       } catch (e) {
-        errorMessage = "Error de conexión con el servidor. Verifica la URL de la API y la estructura de archivos PHP.";
+        console.error("Error al parsear respuesta JSON:", e);
+        throw new Error("Error al procesar la respuesta del servidor. Comprueba que el JSON devuelto es válido.");
       }
       
-      throw new Error(errorMessage);
+      console.log(`Respuesta recibida de ${endpoint}:`, data);
+      
+      // Si son clientes, guardar en localStorage como respaldo
+      if (endpoint === config.endpoints.clients) {
+        localStorage.setItem('demo_clients', JSON.stringify(data));
+      }
+      
+      return data;
+    } catch (serverError) {
+      // Si estamos en modo de desarrollo o falla la conexión al servidor, intentamos usar datos locales
+      if (config.isDevelopmentMode || window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com')) {
+        console.warn("Error al conectar con el servidor, usando datos locales:", serverError);
+        
+        // Para todas las peticiones diferentes a clientes, devolvemos datos de demostración
+        if (endpoint !== config.endpoints.clients) {
+          return [] as unknown as T;
+        }
+        
+        const cachedData = localStorage.getItem('demo_clients');
+        if (cachedData) {
+          return JSON.parse(cachedData) as T;
+        }
+        
+        // Si no hay datos en caché, creamos un array vacío
+        const emptyData = createEmptyData();
+        localStorage.setItem('demo_clients', JSON.stringify(emptyData));
+        return emptyData as unknown as T;
+      }
+      
+      // Si no estamos en modo desarrollo y hay un error, lo propagamos
+      throw serverError;
     }
-
-    // Verificar que la respuesta es JSON antes de procesarla
-    if (!contentType || !contentType.includes("application/json")) {
-      console.error("La respuesta del servidor no es JSON. Contenido recibido:", await response.text());
-      // Caemos al modo fallback
-      throw new Error("La respuesta del servidor no es un JSON válido. Comprueba que todos los archivos PHP devuelven JSON correctamente.");
-    }
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (e) {
-      console.error("Error al parsear respuesta JSON:", e);
-      throw new Error("Error al procesar la respuesta del servidor. Comprueba que el JSON devuelto es válido.");
-    }
-    
-    console.log(`Respuesta recibida de ${endpoint}:`, data);
-    
-    // Si son clientes, guardar en localStorage como respaldo
-    if (endpoint === config.endpoints.clients) {
-      localStorage.setItem('demo_clients', JSON.stringify(data));
-    }
-    
-    return data;
   } catch (error) {
     console.error("API Error:", error);
     
@@ -173,8 +176,8 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       }
     }
     
-    // Usar datos locales como fallback para clientes
-    if (endpoint === config.endpoints.clients) {
+    // Usar datos locales como fallback para clientes, pero solo en desarrollo
+    if ((config.isDevelopmentMode || window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com')) && endpoint === config.endpoints.clients) {
       console.warn("Usando datos locales debido a error de conexión");
       toast.error(errorMessage, {
         description: "Usando datos guardados localmente como respaldo"

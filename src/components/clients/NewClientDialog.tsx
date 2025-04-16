@@ -41,7 +41,7 @@ const clientSchema = z.object({
 type ClientFormValues = z.infer<typeof clientSchema>;
 
 export function NewClientDialog() {
-  const { addClient } = useApp();
+  const { addClient, refreshData } = useApp();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -58,16 +58,21 @@ export function NewClientDialog() {
     try {
       setIsSubmitting(true);
       
-      // Call addClient without checking its return value
-      await addClient({
+      // Call addClient and wait for result
+      const result = await addClient({
         name: data.name,
         email: data.email,
         phone: data.phone
       });
       
-      // Always close dialog and reset form after successful submission
+      console.log("Cliente creado con éxito:", result);
+      
+      // Close dialog and reset form after successful submission
       setOpen(false);
       form.reset();
+      
+      // Refresh data to ensure we have the latest from the server
+      setTimeout(() => refreshData(), 1000);
       
     } catch (error) {
       console.error("Error al crear el cliente:", error);
