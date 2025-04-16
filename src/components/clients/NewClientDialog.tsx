@@ -24,7 +24,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import config from "@/config";
 
 const clientSchema = z.object({
   name: z.string().min(2, { 
@@ -44,6 +46,7 @@ export function NewClientDialog() {
   const { addClient, refreshData } = useApp();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -57,6 +60,7 @@ export function NewClientDialog() {
   const onSubmit = async (data: ClientFormValues) => {
     try {
       setIsSubmitting(true);
+      setServerError(null);
       
       // Call addClient and wait for result
       const result = await addClient({
@@ -71,12 +75,26 @@ export function NewClientDialog() {
       setOpen(false);
       form.reset();
       
+      // Notificar al usuario
+      toast.success("Cliente creado con éxito", {
+        description: "El cliente ha sido añadido al sistema"
+      });
+      
       // Refresh data to ensure we have the latest from the server
       setTimeout(() => refreshData(), 1000);
       
     } catch (error) {
       console.error("Error al crear el cliente:", error);
-      toast.error("Error al crear el cliente");
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Error al conectar con el servidor";
+      
+      setServerError(errorMessage);
+      
+      toast.error("Error al crear el cliente", {
+        description: `${errorMessage}${config.isDevelopmentMode ? " (Usando modo de desarrollo)" : ""}`,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -96,6 +114,21 @@ export function NewClientDialog() {
             Complete los datos del nuevo cliente. Haga clic en guardar cuando termine.
           </DialogDescription>
         </DialogHeader>
+        
+        {serverError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {serverError}
+              {config.isDevelopmentMode && (
+                <div className="mt-1 text-xs opacity-80">
+                  Modo de desarrollo activo: Los datos se guardarán localmente.
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField

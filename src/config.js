@@ -11,7 +11,7 @@ const config = {
     : "https://grey-lion-594825.hostingersite.com/api", // URL para Hostinger
   
   // Modo de desarrollo (ajustado para permitir conexión al servidor pero con fallback)
-  isDevelopmentMode: false,
+  isDevelopmentMode: true, // Cambiado a true para permitir fallback a datos locales
   
   // Endpoints de la API
   endpoints: {
