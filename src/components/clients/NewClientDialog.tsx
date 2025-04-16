@@ -62,6 +62,7 @@ export function NewClientDialog() {
       setServerError(null);
       
       // Call addClient and wait for result
+      console.log("Enviando datos al servidor:", data);
       const result = await addClient({
         name: data.name,
         email: data.email,

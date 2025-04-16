@@ -1,6 +1,12 @@
 
 <?php
-require_once '../../config.php';
+require_once '../../config.php'; // Asegurarnos que la ruta es correcta (dos niveles arriba)
+
+// Registrar inicio de la solicitud para depuración
+logActivity('Solicitud recibida en clients/index.php', [
+  'method' => $_SERVER['REQUEST_METHOD'],
+  'params' => $_GET,
+]);
 
 // Verificar autenticación para todas las rutas excepto GET
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -24,6 +30,8 @@ function getClients() {
   global $conn;
   
   try {
+    logActivity('Obteniendo clientes');
+    
     // Obtener parámetros de filtro
     $status = $_GET['status'] ?? null;
     $search = $_GET['search'] ?? null;
@@ -49,6 +57,8 @@ function getClients() {
     $stmt = $conn->prepare($query);
     $stmt->execute($params);
     $clients = $stmt->fetchAll();
+    
+    logActivity('Clientes encontrados', ['count' => count($clients)]);
     
     // Si no hay clientes, devolver un array vacío para evitar errores
     if (empty($clients)) {
@@ -103,6 +113,7 @@ function getClients() {
     
     response($clients);
   } catch(PDOException $e) {
+    logActivity('Error al obtener clientes', ['error' => $e->getMessage()]);
     response(['error' => 'Error al obtener clientes: ' . $e->getMessage()], 500);
   }
 }
@@ -112,10 +123,14 @@ function createClient() {
   global $conn;
   
   // Obtener datos del cuerpo de la petición
-  $data = json_decode(file_get_contents('php://input'), true);
+  $rawData = file_get_contents('php://input');
+  $data = json_decode($rawData, true);
+  
+  logActivity('Creando nuevo cliente', ['data' => $data, 'raw' => $rawData]);
   
   // Validar datos requeridos
   if (!isset($data['name']) || !isset($data['email']) || !isset($data['phone'])) {
+    logActivity('Datos incompletos al crear cliente');
     response(['error' => 'Datos incompletos. Se requiere nombre, email y teléfono'], 400);
   }
   
@@ -124,6 +139,7 @@ function createClient() {
     $stmt = $conn->prepare("SELECT COUNT(*) FROM clients WHERE email = ?");
     $stmt->execute([$data['email']]);
     if ($stmt->fetchColumn() > 0) {
+      logActivity('Email duplicado al crear cliente', ['email' => $data['email']]);
       response(['error' => 'Ya existe un cliente con ese email'], 400);
     }
     
@@ -149,8 +165,10 @@ function createClient() {
     $client = $stmt->fetch();
     $client['orders'] = [];
     
+    logActivity('Cliente creado exitosamente', ['client' => $client]);
     response($client, 201);
   } catch(PDOException $e) {
+    logActivity('Error al crear cliente', ['error' => $e->getMessage()]);
     response(['error' => 'Error al crear cliente: ' . $e->getMessage()], 500);
   }
 }

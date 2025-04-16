@@ -1,6 +1,6 @@
 
 <?php
-require_once '../config.php';  // Cambiado a '../config.php' para referenciar correctamente
+require_once '../config.php';  // Asegurarnos que la ruta es correcta
 
 // Este archivo sirve como punto de entrada para la API
 // Simplemente devuelve información sobre los endpoints disponibles
