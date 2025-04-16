@@ -32,10 +32,13 @@ $response = [
 ];
 
 // Intentar cargar la configuración para probar si existe
-$config_file = '../config.php';
+// Ajustamos la ruta para buscar en el directorio principal de la API
+$config_file = __DIR__ . '/../config.php';  // Cambiado de '../config.php' a usar __DIR__
 $db_test = [
     'config_exists' => file_exists($config_file) ? 'Sí' : 'No',
-    'config_path' => realpath($config_file) ?: 'No encontrado'
+    'config_path' => realpath($config_file) ?: 'No encontrado',
+    'current_dir' => __DIR__,
+    'parent_dir' => dirname(__DIR__)
 ];
 
 // Intentamos incluir la configuración si existe

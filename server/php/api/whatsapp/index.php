@@ -1,6 +1,6 @@
 
 <?php
-require_once '../../config.php';
+require_once '../../config.php';  // Ruta relativa correcta
 
 // Verificar autenticación
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

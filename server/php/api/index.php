@@ -1,6 +1,6 @@
 
 <?php
-require_once '../config.php';  // Asegurarnos que la ruta es correcta
+require_once '../config.php';  // Ruta relativa correcta
 
 // Configuración de encabezados CORS
 header("Access-Control-Allow-Origin: *");

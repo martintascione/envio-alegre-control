@@ -33,11 +33,18 @@ const config = {
   defaultLanguage: "es",
   notificationsEnabled: true,
   
-  // Tiempo máximo de espera para peticiones (en milisegundos)
-  requestTimeout: 10000,
+  // Configuraciones de red
+  requestTimeout: 15000, // Aumentado a 15 segundos
+  retryAttempts: 2, // Número de reintentos antes de usar modo fallback
+  
+  // Cache control
+  disableCache: true, // Para evitar problemas con cachés del navegador
+  
+  // Debug mode para mostrar más información en consola
+  debugMode: true, 
   
   // Versión de la aplicación
-  version: "1.0.8" // Incrementada versión para reflejar cambios
+  version: "1.0.9" // Incrementada versión para reflejar cambios
 };
 
 export default config;
