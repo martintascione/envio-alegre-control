@@ -10,8 +10,8 @@ const config = {
     ? "http://localhost:8080/api" // Desarrollo local
     : "https://grey-lion-594825.hostingersite.com/api", // URL para Hostinger
   
-  // Modo de desarrollo (desactivado para forzar conexión al servidor)
-  isDevelopmentMode: false, // Forzamos conexión al servidor sin fallback
+  // Modo de desarrollo desactivado completamente para forzar conexión al servidor
+  isDevelopmentMode: false,
   
   // Endpoints de la API
   endpoints: {
@@ -19,7 +19,8 @@ const config = {
     orders: "/orders",
     settings: "/settings",
     whatsapp: "/whatsapp",
-    auth: "/auth"
+    auth: "/auth",
+    test: "/test.php" // Añadido endpoint de prueba para verificar conexión
   },
   
   // Configuración WhatsApp
@@ -33,7 +34,7 @@ const config = {
   notificationsEnabled: true,
   
   // Versión de la aplicación
-  version: "1.0.6"
+  version: "1.0.7" // Incrementada versión para reflejar cambios
 };
 
 export default config;

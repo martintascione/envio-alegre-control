@@ -1,4 +1,3 @@
-
 import config from "../config.js";
 import { toast } from "sonner";
 
@@ -19,6 +18,40 @@ export const setAuthToken = (token: string | null) => {
     localStorage.removeItem("auth_token");
   }
 };
+
+// Función para probar la conexión al servidor
+export async function testConnection(): Promise<any> {
+  try {
+    const url = `${config.apiUrl}${config.endpoints.test}`;
+    console.log(`Probando conexión a: ${url}`);
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error en la respuesta:", errorText);
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await response.text();
+      console.error("Respuesta no es JSON:", text);
+      throw new Error("La respuesta del servidor no es un JSON válido");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error al probar conexión:", error);
+    throw error;
+  }
+}
 
 // Función para crear datos vacíos iniciales
 function createEmptyData() {
@@ -58,8 +91,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     console.log(`Realizando petición a: ${url}`);
     
-    // Primero intentamos siempre conectar con el servidor real, independientemente del modo
-    // Intentar conectar con timeout para evitar esperas largas
+    // Siempre conectar con el servidor real, sin modo de desarrollo
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
     
@@ -91,6 +123,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
           // Intentamos leer el cuerpo como texto primero
           const errorText = await response.text();
           
+          // Registrar error para depuración
+          console.error(`Error en respuesta (${response.status}):`, errorText);
+          
           // Si el error contiene HTML, probablemente es una página de error de Hostinger
           if (errorText.includes('<!DOCTYPE html>')) {
             console.error("Error HTML recibido:", errorText.substring(0, 200) + "...");
@@ -119,8 +154,9 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   
       // Verificar que la respuesta es JSON antes de procesarla
       if (!contentType || !contentType.includes("application/json")) {
-        console.error("La respuesta del servidor no es JSON. Contenido recibido:", await response.text());
-        throw new Error("La respuesta del servidor no es un JSON válido. Comprueba que todos los archivos PHP devuelven JSON correctamente.");
+        const responseText = await response.text();
+        console.error("La respuesta del servidor no es JSON. Contenido recibido:", responseText);
+        throw new Error(`La respuesta del servidor no es un JSON válido. Contenido: ${responseText.substring(0, 100)}...`);
       }
   
       let data;
@@ -140,27 +176,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       
       return data;
     } catch (serverError) {
-      // Si estamos en modo de desarrollo o falla la conexión al servidor, intentamos usar datos locales
-      if (config.isDevelopmentMode || window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com')) {
-        console.warn("Error al conectar con el servidor, usando datos locales:", serverError);
-        
-        // Para todas las peticiones diferentes a clientes, devolvemos datos de demostración
-        if (endpoint !== config.endpoints.clients) {
-          return [] as unknown as T;
-        }
-        
-        const cachedData = localStorage.getItem('demo_clients');
-        if (cachedData) {
-          return JSON.parse(cachedData) as T;
-        }
-        
-        // Si no hay datos en caché, creamos un array vacío
-        const emptyData = createEmptyData();
-        localStorage.setItem('demo_clients', JSON.stringify(emptyData));
-        return emptyData as unknown as T;
-      }
-      
-      // Si no estamos en modo desarrollo y hay un error, lo propagamos
+      // En caso de error, sólo lanzamos el error ya que el modo desarrollo está desactivado
       throw serverError;
     }
   } catch (error) {
@@ -175,30 +191,6 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
         errorMessage = "La conexión tardó demasiado tiempo. Verifica la URL de la API y la estructura del servidor.";
       }
     }
-    
-    // Usar datos locales como fallback para clientes, pero solo en desarrollo
-    if ((config.isDevelopmentMode || window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com')) && endpoint === config.endpoints.clients) {
-      console.warn("Usando datos locales debido a error de conexión");
-      toast.error(errorMessage, {
-        description: "Usando datos guardados localmente como respaldo"
-      });
-      
-      // Cargar datos de caché desde localStorage si existen
-      const cachedData = localStorage.getItem('demo_clients');
-      if (cachedData) {
-        return JSON.parse(cachedData) as T;
-      }
-      
-      // Si no hay datos en caché, creamos un array vacío
-      const emptyData = createEmptyData();
-      localStorage.setItem('demo_clients', JSON.stringify(emptyData));
-      return emptyData as unknown as T;
-    }
-    
-    // Mostrar el error al usuario
-    toast.error(errorMessage, {
-      description: "Verifica la conexión con el servidor y la estructura de archivos PHP"
-    });
     
     throw error;
   }

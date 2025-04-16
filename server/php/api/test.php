@@ -8,6 +8,10 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
+// Manejo de errores explícito para capturar problemas
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // No mostrar errores directamente, los capturamos nosotros
+
 // Incluir archivo de configuración de la base de datos
 require_once '../config.php';
 
